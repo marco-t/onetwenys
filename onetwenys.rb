@@ -9,7 +9,7 @@ class Game
       name = "Player #{i+1}"
       @players << Player.new(name)
     end
-    #@players[0][:human] = true     ####################
+    @players[0][:human] = true
 
     # assign teams
     number_of_teams = number_of_players / 2
@@ -27,22 +27,15 @@ class Game
     # team wins when their score reaches 120 or more.
     # team can only win if they placed the last bet
 
-    weiner = ''                                   ##################
-    round_num = 0                                 ######################
-    until @gameOver do
-    #1.times do # Play once for testing             #####################
+    #until @gameOver do
+    1.times do # Play once for testing
       round = Round.new(@players, @teams)
-      puts "ROUND #{round_num}"                     ######################
       round.play_round
-      round_num += 1                                ###################
       @teams.each do |team|
         team.score = team.mate1[:score] + team.mate2[:score]
-        puts "####### #{team.mate1}'s team's score: #{team.score} #######"
         @gameOver = true if team.score >= 120
-        weiner = team if team.score >= 120            ###################
       end
     end
-    puts "#{weiner.mate1} and #{weiner.mate2} win!!"    ##############
   end
 end
 
