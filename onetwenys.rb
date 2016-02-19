@@ -28,10 +28,11 @@ class Game
     # player can only win if they placed the last bet
 
     #until @gameOver do
-    1.times do # change this
+    1.times do # Play once for testing
       round = Round.new(@players, @teams)
       round.play_round
       @teams.each do |team|
+        team.score = team.mate1[:score] + team.mate2[:score]
         @gameOver = true if team.score >= 120
       end
     end     
@@ -84,7 +85,7 @@ class Round
 
     # index of dealer
     i = @players.index do |player|
-      player[:dealer] == true # probably remove '== true'
+      player[:dealer]
     end
 
     # move dealer button
@@ -98,13 +99,13 @@ class Trick
   def initialize(players, teams)
     @players = players
     @teams = teams
-    @trick = []
   end
 
   # each player lays a card. Winner is returned
   def play_trick(trump)
     winning_player = nil
-    until @trick.count == @players.count do
+    trick = []
+    until trick.count == @players.count do
       winning_card, winning_player = nil, nil
       @players.each.with_index do |player, i|
         if player[:human]
@@ -113,8 +114,8 @@ class Trick
         else
           card_laid = player.ai_lay_card
         end
-        card_laid.set_value(trump, @trick[0])
-        @trick << card_laid
+        card_laid.set_value(trump, trick[0])
+        trick << card_laid
         puts "Player #{player[:name]} laid #{card_laid}. Value: #{card_laid[:value]}"
         
         winning_card ||= card_laid
@@ -126,18 +127,9 @@ class Trick
       end
     end
     puts "#{winning_player} wins the trick"; puts
+    winning_player.increase_score(trick)
     winning_player
   end
-
-  def winning_team(trick)
-
-  end
-
-  def win_trick(team)
-    team.score += 5
-    # team.score += 10 if 5 of trump in trick
-  end
-
 end
 
 class Deck
@@ -202,6 +194,7 @@ class Card < Hash
 end
 
 class Team
+  # change mate1 and mate2. ugly names
   attr_accessor :score, :mate1, :mate2
   def initialize(teammate1, teammate2)
     @mate1 = teammate1
@@ -211,11 +204,12 @@ class Team
 end
 
 class Player < Hash
-  # should have :name, :dealer, :human
+  # should have :name, :dealer, :score, :human
   attr_accessor :hand
   def initialize(name)
     self[:name] = name
     self[:dealer] = false
+    self[:score] = 0
     @hand = []
   end
 
@@ -224,7 +218,7 @@ class Player < Hash
   end
 
   def deal(deck, players, kitty)
-    # clear old hands if any, deal 5 cards to each player
+    # clear old cards in hands, if any, deal 5 cards to each player
     players.each do |player|
       player.hand.clear
       player.hand = deck.cards.pop(5)
@@ -245,7 +239,6 @@ class Player < Hash
     puts
   end
 
-  # requires an integer from zero to @hand.length
   def lay_card
     card = nil
     until (1..@hand.length).include? card
@@ -262,6 +255,20 @@ class Player < Hash
 
   def ai_lay_card
     @hand.pop
+  end
+
+  def increase_score(trick)
+    score = nil
+    trick.each do |card|
+      # a trick with the 5 of trump is worth 10 points
+      if card[:value] == 52
+        score = 10
+      else
+        score ||= 5
+      end
+    end
+    puts "#{self[:name]} scored #{score} points!"
+    self[:score] += score
   end
 end
 
