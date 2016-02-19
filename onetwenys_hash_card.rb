@@ -1,3 +1,5 @@
+# use linked lists to pass dealer button and take turns??
+
 class Game
   # number of players must be even
   def initialize(number_of_players)
@@ -7,6 +9,7 @@ class Game
       name = "Player #{i+1}"
       @players << Player.new(name)
     end
+    @players[0][:human] = true
 
     # assign teams
     number_of_teams = number_of_players / 2
@@ -17,7 +20,7 @@ class Game
 
     # draw for dealer
     rand = rand(number_of_players)
-    @players[rand].dealer = true
+    @players[rand][:dealer] = true
   end
 
   def play_game
@@ -43,36 +46,51 @@ class Round
     @kitty = []
     @deck = Deck.new
 
-    # who is the dealer this round?
-    players.each do |player|
-      @dealer = player if player.dealer == true
+    # move dealer to end of array keeping player order
+    temp_array = @players.dup
+    @players.reverse_each do |player|
+      unless player[:dealer]
+        popped_player = temp_array.pop
+        temp_array.unshift(popped_player)
+      else
+        @dealer = player
+        break
+      end
+    end
+    @players = temp_array.dup
+  end
+
+  def move_winner_to_front(winner)
+    @players.reverse_each do |player|
+      popped_player = @players.pop
+      @players.unshift(popped_player)
+      if popped_player == winner
+        break
+      end
     end
   end
 
   def play_round
     @dealer.deal(@deck, @players, @kitty)
 
-    # index of dealer
-    i = @players.index do |player|
-      player.dealer == true
-    end
-
-    # person after dealer is first to lay
-    @players[i+1].nil? ? first_player = @players[0] : first_player = @players[i+1]
-
     trump = [:clubs, :spades, :hearts, :diamonds].shuffle!.pop
+    puts "Dealer is #{@dealer}"
     puts "Trump is #{trump.to_s.upcase}"
     5.times do
       trick = Trick.new(@players, @teams)
-      winner = trick.play_trick(trump, first_player)
-      first_player = winner
-      winner
+      winner = trick.play_trick(trump)
+      move_winner_to_front(winner)
+    end
+
+    # index of dealer
+    i = @players.index do |player|
+      player[:dealer] == true # probably remove '== true'
     end
 
     # move dealer button
-    @players[i].dealer = false
+    @players[i][:dealer] = false
     # if last player was dealer make first player dealer, otherwise next player deals
-    @players[i+1].nil? ? @players[0].dealer = true : @players[i+1].dealer = true
+    @players[i+1].nil? ? @players[0][:dealer] = true : @players[i+1][:dealer] = true
   end
 end
 
@@ -84,13 +102,12 @@ class Trick
   end
 
   # each player lays a card. Winner is returned
-  def play_trick(trump, first_player)
+  def play_trick(trump)
     winning_player = nil
     until @trick.count == @players.count do
       winning_card, winning_player = nil, nil
       @players.each.with_index do |player, i|
-        # @players[0] is human
-        if player == @players[0]
+        if player[:human]
           player.show_hand
           card_laid = player.lay_card
         else
@@ -98,7 +115,7 @@ class Trick
         end
         card_laid.set_value(trump, @trick[0])
         @trick << card_laid
-        puts "Player #{i+1} laid #{card_laid}. Value: #{card_laid[:value]}"
+        puts "Player #{player[:name]} laid #{card_laid}. Value: #{card_laid[:value]}"
         
         winning_card ||= card_laid
         winning_player ||= player
@@ -108,11 +125,9 @@ class Trick
         end
       end
     end
-    puts "#{winning_player.name} wins the trick"; puts
+    puts "#{winning_player} wins the trick"; puts
     winning_player
   end
-
-  
 
   def winning_team(trick)
 
@@ -195,12 +210,17 @@ class Team
   end
 end
 
-class Player
-  attr_accessor :hand, :dealer, :name
+class Player < Hash
+  # should have :name, :dealer, :human
+  attr_accessor :hand
   def initialize(name)
-    @name = name
+    self[:name] = name
+    self[:dealer] = false
     @hand = []
-    @dealer = false
+  end
+
+  def to_s
+    "#{self[:name]}"
   end
 
   def deal(deck, players, kitty)
