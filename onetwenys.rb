@@ -1,3 +1,5 @@
+# use linked lists to pass dealer button and take turns??
+
 class Game
   # number of players must be even
   def initialize(number_of_players)
@@ -7,6 +9,7 @@ class Game
       name = "Player #{i+1}"
       @players << Player.new(name)
     end
+    @players[0][:human] = true
 
     # assign teams
     number_of_teams = number_of_players / 2
@@ -17,7 +20,7 @@ class Game
 
     # draw for dealer
     rand = rand(number_of_players)
-    @players[rand].dealer = true
+    @players[rand][:dealer] = true
   end
 
   def play_game
@@ -43,36 +46,51 @@ class Round
     @kitty = []
     @deck = Deck.new
 
-    # who is the dealer this round?
-    players.each do |player|
-      @dealer = player if player.dealer == true
+    # move dealer to end of array keeping player order
+    temp_array = @players.dup
+    @players.reverse_each do |player|
+      unless player[:dealer]
+        popped_player = temp_array.pop
+        temp_array.unshift(popped_player)
+      else
+        @dealer = player
+        break
+      end
+    end
+    @players = temp_array.dup
+  end
+
+  def move_winner_to_front(winner)
+    @players.reverse_each do |player|
+      popped_player = @players.pop
+      @players.unshift(popped_player)
+      if popped_player == winner
+        break
+      end
     end
   end
 
   def play_round
     @dealer.deal(@deck, @players, @kitty)
 
-    # index of dealer
-    i = @players.index do |player|
-      player.dealer == true
-    end
-
-    # person after dealer is first to lay
-    @players[i+1].nil? ? first_player = @players[0] : first_player = @players[i+1]
-
     trump = [:clubs, :spades, :hearts, :diamonds].shuffle!.pop
+    puts "Dealer is #{@dealer}"
     puts "Trump is #{trump.to_s.upcase}"
     5.times do
       trick = Trick.new(@players, @teams)
-      winner = trick.play_trick(trump, first_player)
-      first_player = winner
-      winner
+      winner = trick.play_trick(trump)
+      move_winner_to_front(winner)
+    end
+
+    # index of dealer
+    i = @players.index do |player|
+      player[:dealer] == true # probably remove '== true'
     end
 
     # move dealer button
-    @players[i].dealer = false
+    @players[i][:dealer] = false
     # if last player was dealer make first player dealer, otherwise next player deals
-    @players[i+1].nil? ? @players[0].dealer = true : @players[i+1].dealer = true
+    @players[i+1].nil? ? @players[0][:dealer] = true : @players[i+1][:dealer] = true
   end
 end
 
@@ -84,21 +102,20 @@ class Trick
   end
 
   # each player lays a card. Winner is returned
-  def play_trick(trump, first_player)
+  def play_trick(trump)
     winning_player = nil
     until @trick.count == @players.count do
       winning_card, winning_player = nil, nil
       @players.each.with_index do |player, i|
-        # @players[0] is human
-        if player == @players[0]
+        if player[:human]
           player.show_hand
           card_laid = player.lay_card
         else
           card_laid = player.ai_lay_card
         end
-        set_card_value(trump, card_laid, @trick[0])
+        card_laid.set_value(trump, @trick[0])
         @trick << card_laid
-        puts "Player #{i+1} laid #{card_laid[:number]} of #{card_laid[:suit].capitalize}. Value: #{card_laid[:value]}"
+        puts "Player #{player[:name]} laid #{card_laid}. Value: #{card_laid[:value]}"
         
         winning_card ||= card_laid
         winning_player ||= player
@@ -108,43 +125,8 @@ class Trick
         end
       end
     end
-    puts "#{winning_player.name} wins the trick"; puts
+    puts "#{winning_player} wins the trick"; puts
     winning_player
-  end
-
-  def set_card_value(trump, card, first_card = nil)
-    # sets first suit to card's suit if no other card was played
-    first_card.nil? ? first_suit = card[:suit] : first_suit = first_card[:suit]
-    
-    red_values = { 'K' => 13, 'Q' => 12, 'J' => 11, '10' => 10, '9' => 9, '8' => 8, '7' => 7, 
-                 '6' => 6, '5' => 5, '4' => 4, '3' => 3, '2' => 2, 'A' => 1 }
-
-    black_values = { 'K' => 13, 'Q' => 12, 'J' => 11, 'A' => 10, '2' => 9, '3' => 8, '4' => 7,
-                   '5' => 6, '6' => 5, '7' => 4, '8' => 3, '9' => 2, '10' => 1  }
-
-    if card[:name] == :Ah
-      card[:value] = 50
-    elsif card[:suit] == trump
-      if card[:number] == '5'
-        card[:value] = 52
-      elsif card[:number] == 'J'
-        card[:value] = 51
-      elsif card[:number] == 'A'
-        card[:value] = 49
-      elsif card[:color] == :black
-        card[:value] = black_values[card[:number]] + 35
-      elsif card[:color] == :red
-        card[:value] = red_values[card[:number]] + 35
-      end
-    elsif card[:suit] == first_suit
-      if card[:color] == :black
-        card[:value] = black_values[card[:number]]
-      else
-        card[:value] = red_values[card[:number]]
-      end
-    else
-      card[:value] = 0
-    end
   end
 
   def winning_team(trick)
@@ -169,11 +151,53 @@ class Deck
       numbers.each do |number|
         abrv = (number.to_s + suit.to_s.chr).to_sym
         suit == :clubs || suit == :spades ? color = :black : color = :red
-        card = { name: abrv, number: number, suit: suit, color: color, value: nil }
+        card = Card.new
+        card.update(name: abrv, number: number, suit: suit, color: color, value: nil)
         @cards << card
       end
     end
     @cards.shuffle!
+  end
+end
+
+class Card < Hash
+  def to_s
+    "#{self[:number]} of #{self[:suit].to_s.capitalize}"
+  end
+
+  def set_value(trump, first_card = nil)
+    # sets first suit to card's suit if no other card was played
+    first_card.nil? ? first_suit = self[:suit] : first_suit = first_card[:suit]
+    
+    red_values = { 'K' => 13, 'Q' => 12, 'J' => 11, '10' => 10, '9' => 9, '8' => 8, '7' => 7, 
+                 '6' => 6, '5' => 5, '4' => 4, '3' => 3, '2' => 2, 'A' => 1 }
+
+    black_values = { 'K' => 13, 'Q' => 12, 'J' => 11, 'A' => 10, '2' => 9, '3' => 8, '4' => 7,
+                   '5' => 6, '6' => 5, '7' => 4, '8' => 3, '9' => 2, '10' => 1  }
+
+    if self[:name] == :Ah
+      self[:value] = 50
+    elsif self[:suit] == trump
+      if self[:number] == '5'
+        self[:value] = 52
+      elsif self[:number] == 'J'
+        self[:value] = 51
+      elsif self[:number] == 'A'
+        self[:value] = 49
+      elsif self[:color] == :black
+        self[:value] = black_values[self[:number]] + 35
+      elsif self[:color] == :red
+        self[:value] = red_values[self[:number]] + 35
+      end
+    elsif self[:suit] == first_suit
+      if self[:color] == :black
+        self[:value] = black_values[self[:number]]
+      else
+        self[:value] = red_values[self[:number]]
+      end
+    else
+      self[:value] = 0
+    end
   end
 end
 
@@ -186,12 +210,17 @@ class Team
   end
 end
 
-class Player
-  attr_accessor :hand, :dealer, :name
+class Player < Hash
+  # should have :name, :dealer, :human
+  attr_accessor :hand
   def initialize(name)
-    @name = name
+    self[:name] = name
+    self[:dealer] = false
     @hand = []
-    @dealer = false
+  end
+
+  def to_s
+    "#{self[:name]}"
   end
 
   def deal(deck, players, kitty)
@@ -209,8 +238,8 @@ class Player
   end
 
   def show_hand
-    @hand.each do |hand|
-      print "| #{hand[:number]} of #{hand[:suit].to_s.capitalize} "
+    @hand.each do |card|
+      print "| #{card} "
     end
     print '|'
     puts
