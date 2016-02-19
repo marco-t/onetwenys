@@ -9,7 +9,7 @@ class Game
       name = "Player #{i+1}"
       @players << Player.new(name)
     end
-    @players[0][:human] = true
+    #@players[0][:human] = true     ####################
 
     # assign teams
     number_of_teams = number_of_players / 2
@@ -24,18 +24,25 @@ class Game
   end
 
   def play_game
-    # player wins when their score reaches 120 or more.
-    # player can only win if they placed the last bet
+    # team wins when their score reaches 120 or more.
+    # team can only win if they placed the last bet
 
-    #until @gameOver do
-    1.times do # Play once for testing
+    weiner = ''                                   ##################
+    round_num = 0                                 ######################
+    until @gameOver do
+    #1.times do # Play once for testing             #####################
       round = Round.new(@players, @teams)
+      puts "ROUND #{round_num}"                     ######################
       round.play_round
+      round_num += 1                                ###################
       @teams.each do |team|
         team.score = team.mate1[:score] + team.mate2[:score]
+        puts "####### #{team.mate1}'s team's score: #{team.score} #######"
         @gameOver = true if team.score >= 120
+        weiner = team if team.score >= 120            ###################
       end
-    end     
+    end
+    puts "#{weiner.mate1} and #{weiner.mate2} win!!"    ##############
   end
 end
 
@@ -88,9 +95,8 @@ class Round
       player[:dealer]
     end
 
-    # move dealer button
-    @players[i][:dealer] = false
     # if last player was dealer make first player dealer, otherwise next player deals
+    @players[i][:dealer] = false
     @players[i+1].nil? ? @players[0][:dealer] = true : @players[i+1][:dealer] = true
   end
 end
@@ -200,6 +206,16 @@ class Team
     @mate1 = teammate1
     @mate2 = teammate2
     @score = 0
+  end
+
+  def thirty_for_sixty
+    # if team bids 30 and wins all tricks in the round they get 60 points
+    new_score = @mate1[:score] + @mate2[:score]
+    if new_score - score == 30
+      @mate1[:score] += 15
+      @mate2[:score] += 15
+    end
+    score = @mate1[:score] + @mate2[:score]
   end
 end
 
