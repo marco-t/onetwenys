@@ -48,20 +48,23 @@ class Player
 		@dealer = false
 	end
 
-	def pass_deck(other_player)
-		self.dealer = false
-		other_player.dealer = true
-	end
-
 	def deal(deck, players, kitty)
 		# clear old hands if any, deal 5 cards to each player
 		players.each do |player|
 			player.hand.clear
-			player.hand << deck.cards.pop(5)
+			player.hand = deck.cards.pop(5)
 		end
 
 		# add three cards to empty kitty
-		kitty << deck.cards.pop(3)
+		kitty = deck.cards.pop(3)
+	end
+
+	def bet(amount)
+	end
+
+	def lay_card
+		# change from pop to give user choice of card
+		@hand.pop
 	end
 end
 
@@ -79,26 +82,16 @@ class Round
 		end
 	end
 
-	def bet
-	end
-
 	def play_round
 		@dealer.deal(@deck, @players, @kitty)
 
-		roundOver = false
-		tricks_played = 0
-
-		until roundOver do
+		5.times do
 			trick = Trick.new(@players, @teams)
 			trick.play_trick
-			tricks_played += 1
-			if tricks_played == 5
-				roundOver = true
-			end
 		end
 
 		# index of dealer
-		i = @players.rindex do |player|
+		i = @players.index do |player|
 			player.dealer == true
 		end
 
@@ -112,11 +105,17 @@ class Trick
 	def initialize(players, teams)
 		@players = players
 		@teams = teams
+		@trick = []
 	end
 
 	def play_trick
-
-		win_trick(@teams[0])
+		until @trick.count == @players.count do
+			@players.each do |player|
+				card_layed = player.lay_card
+				@trick << card_layed
+			end
+		end
+		#win_trick(@teams[0])
 	end
 
 	def win_trick(team)
