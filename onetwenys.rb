@@ -44,8 +44,9 @@ class Round
     @players = players
     @teams = teams
     
-    @kitty = []
     @deck = Deck.new
+    @kitty = []
+    @bid = { amount: 0, player: nil }
 
     # move dealer to end of array keeping player order
     temp_array = @players.dup
@@ -74,6 +75,8 @@ class Round
   def play_round
     @dealer.deal(@deck, @players, @kitty)
 
+    bidding(@players)
+
     trump = [:clubs, :spades, :hearts, :diamonds].shuffle!.pop
     puts "Dealer is #{@dealer}"
     puts "Trump is #{trump.to_s.upcase}"
@@ -91,6 +94,68 @@ class Round
     # if last player was dealer make first player dealer, otherwise next player deals
     @players[i][:dealer] = false
     @players[i+1].nil? ? @players[0][:dealer] = true : @players[i+1][:dealer] = true
+  end
+
+  def bidding(players)
+    # make sure they are ordered properly with dealer bidding last
+    last_bet = 0
+    bidding_player = nil
+    players.each do |player|
+      if player[:human]
+        valid = false
+        error = ''
+        msg = 'Bid (0|20|25|30): '
+        until valid
+          begin
+            puts error+msg
+            bet = Integer(gets)
+            puts
+          rescue
+            error = "Invalid input.\n"
+            retry
+          end
+          if bet == 0 || bet == 20 || bet == 25 || bet == 30
+            if bet == 0 # pass
+              valid = true
+            elsif bet == last_bet
+              if player[:dealer]
+                puts 'Mine.'
+                bidding_over = false
+                until bidding_over
+                  # last bidder gets chance to bid higher than dealer
+                  # then dealer get chance to say "Mine." again then repeat
+                  # until bet == 30 or dealer says "Go on."
+                  # bet = Integer(gets)
+                  # . . . not useful when only one human player
+                  bidding_over = true
+                end
+                last_bet = bet
+                bidding_player = player
+                valid = true
+              else
+                error = "Bid higher than #{last_bet}\n"
+              end
+            elsif bet > last_bet
+              valid = true
+              last_bet = bet
+              bidding_player = player
+            else
+              error = "Bid higher than #{last_bet}\n"
+            end
+          else
+            error = "Invalid input.\n"
+          end
+        end
+      else # player is not human
+        bet = [0, 20].shuffle.pop if last_bet == 0
+      end
+    end
+    if last_bet == 0
+      last_bet = 20
+      bidding_player = players.last # dealer
+    end
+    @bid.update(amount: last_bet, player: bidding_player)
+    puts "#{@bid[:player]} bids #{@bid[:amount]}"
   end
 end
 
@@ -125,7 +190,7 @@ class Trick
         end
       end
     end
-    puts "#{winning_player} wins the trick"; puts
+    puts "#{winning_player} wins the trick"
     winning_player.increase_score(trick)
     winning_player
   end
@@ -237,9 +302,6 @@ class Player < Hash
     kitty = deck.cards.pop(3)
   end
 
-  def bet(amount)
-  end
-
   def show_hand
     @hand.each do |card|
       print "| #{card} "
@@ -276,7 +338,7 @@ class Player < Hash
         score ||= 5
       end
     end
-    puts "#{self[:name]} scored #{score} points!"
+    puts "#{self[:name]} scored #{score} points!\n"
     self[:score] += score
   end
 end
