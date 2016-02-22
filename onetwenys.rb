@@ -16,8 +16,8 @@ class Game
     @teams = []
     number_of_teams.times do |i|
       @teams << Team.new(@players[i], @players[i+2])
-      @players[i][:team] = i + 1
-      @players[i+2][:team] = i + 1
+      @players[i][:team] = @teams[i]
+      @players[i+2][:team] = @teams[i]
     end
 
     # draw for dealer
@@ -34,7 +34,6 @@ class Game
       round = Round.new(@players, @teams)
       round.play_round
       @teams.each do |team|
-        team.score = team.mate1[:score] + team.mate2[:score]
         @game_over = true if team.score >= 120
       end
     end
@@ -49,9 +48,13 @@ class Round
     @deck = Deck.new
     @kitty = []
     @bid = { amount: 0, player: nil, team: nil }
+    @scores = {}
+    @teams.each do |team|
+      @scores[team] = 0
+    end
 
 
-    # move dealer
+    # move dealer to end of array
     @players.each do |player|
       @dealer = player if player[:dealer]
     end
@@ -97,18 +100,40 @@ class Round
     puts "#{@bid[:player]} goes first"
     5.times do
       trick = Trick.new(@players, @teams)
-      winner = trick.play_trick(trump)
+      winner, winner_points = trick.play_trick(trump)
+      @scores[winner[:team]] += winner_points
       move_player_to_front(winner)
     end
 
+    @teams.each.with_index do |team, i|
+      if team == @bid[:team]
+        if @scores[team] >= @bid[:amount]
+          # if team bid 30 and win all tricks they get 60 points
+          @scores[team] = 60 if @bid[:amount] == 30
+          # bidding team gains if they reached their bid
+          team.score += @scores[team]
+          puts "Team #{i+1} gained #{@scores[team]} points"
+        else
+          # they lose points if they didn't reach their bid
+          team.score -= @bid[:amount]
+          puts "Team #{i+1} lost #{@bid[:amount]} points"
+        end
+      else
+        # non-bidding team gets their points
+        team.score += @scores[team]
+        puts "Team #{i+1} gained #{@scores[team]} points"
+      end
+      puts "Team #{i+1} has #{team.score} points"
+    end
+
     # index of dealer
-    i = @players.index do |player|
+    d = @players.index do |player|
       player[:dealer]
     end
 
     # if last player was dealer make first player dealer, otherwise next player deals
-    @players[i][:dealer] = false
-    @players[i+1].nil? ? @players[0][:dealer] = true : @players[i+1][:dealer] = true
+    @players[d][:dealer] = false
+    @players[d+1].nil? ? @players[0][:dealer] = true : @players[d+1][:dealer] = true
   end
 
   def bidding(players)
@@ -178,9 +203,11 @@ class Round
       last_bid = 20
       bidding_player = players.last # dealer
     end
-    team = bidding_player[:team]
-    @bid.update(amount: last_bid, player: bidding_player, team: team)
+    @bid.update(amount: last_bid, player: bidding_player, team: bidding_player[:team])
     puts "Team #{@bid[:team]} wins bid with #{@bid[:amount]}"
+  end
+
+  def pick_trump
   end
 end
 
@@ -190,7 +217,7 @@ class Trick
     @teams = teams
   end
 
-  # each player lays a card. Winner is returned
+  # each player lays a card. Winner and winner's points are returned
   def play_trick(trump)
     winning_player = nil
     trick = []
@@ -216,8 +243,20 @@ class Trick
       end
     end
     puts "#{winning_player} wins the trick"
-    winning_player.increase_score(trick)
-    winning_player
+    return winning_player, trick_points(trick)
+  end
+
+  def trick_points(trick)
+    points = nil
+    trick.each do |card|
+      # a trick with the 5 of trump is worth 10 points
+      if card[:value] == 52
+        points = 10
+      else
+        points ||= 5
+      end
+    end
+    points
   end
 end
 
@@ -325,7 +364,9 @@ class Player < Hash
     end
 
     # add three cards to empty kitty
-    kitty = deck.cards.pop(3)
+    3.times do
+      kitty << deck.cards.pop
+    end
   end
 
   def show_hand
@@ -355,20 +396,6 @@ class Player < Hash
 
   def ai_lay_card
     @hand.pop
-  end
-
-  def increase_score(trick)
-    score = nil
-    trick.each do |card|
-      # a trick with the 5 of trump is worth 10 points
-      if card[:value] == 52
-        score = 10
-      else
-        score ||= 5
-      end
-    end
-    puts "#{self[:name]} scored #{score} points!"; puts
-    self[:score] += score
   end
 end
 
