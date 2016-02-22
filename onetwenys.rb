@@ -92,6 +92,8 @@ class Round
     move_player_to_front(@bid[:player])
 
     trump = @bid[:player].choose_trump
+    @bid[:player].take_kitty(@kitty)
+    @players.each { |player| player.discard_draw_cards(@deck, trump) }
 
     puts "#{@bid[:player]} goes first"
     5.times do
@@ -102,6 +104,7 @@ class Round
       move_player_to_front(winner)
     end
 
+    # add or subtract to each team's score
     @teams.each.with_index do |team, i|
       if team == @bid[:team]
         if @scores[team] >= @bid[:amount]
@@ -222,7 +225,7 @@ class Trick
         else
           card_laid = player.ai_lay_card
         end
-        card_laid.set_value(trump, trick[0])
+        card_laid.set_value(trump, trick[0]) if card_laid[:value].nil?
         trick << card_laid
         puts "#{player[:name]} laid #{card_laid}. Value: #{card_laid[:value]}"
         
@@ -323,13 +326,12 @@ class Team
 end
 
 class Player < Hash
-  # should have :name, :team, :dealer, :score, :human
+  # should have :name, :team, :dealer, :human
   attr_accessor :hand
   def initialize(name)
     self[:name] = name
     self[:team] = nil
     self[:dealer] = false
-    self[:score] = 0
     @hand = []
   end
 
@@ -378,6 +380,25 @@ class Player < Hash
     end
     puts "Trump is #{trump.to_s.capitalize}"
     trump
+  end
+
+  def take_kitty(kitty)
+    @hand = @hand + kitty
+    show_hand
+  end
+
+  def discard_draw_cards(deck, trump)
+    temp_card = Card.new
+    temp_card[:suit] = trump
+    @hand.each { |card| card.set_value(trump, temp_card) }
+    @hand.keep_if { |card| card[:value] > 0 }
+    @hand.sort_by! { |card| card[:value] }.reverse! 
+    if @hand.length > 5
+      # bidder might have more than 5 cards
+      @hand.pop until @hand.length == 5
+    else
+      @hand << deck.cards.pop until @hand.length == 5
+    end
   end
 
   def show_hand
