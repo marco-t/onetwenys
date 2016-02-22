@@ -3,7 +3,7 @@
 class Game
   # number of players must be even
   def initialize(number_of_players)
-    @gameOver = false
+    @game_over = false
     @players = []
     number_of_players.times do |i|
       name = "Player #{i+1}"
@@ -16,6 +16,8 @@ class Game
     @teams = []
     number_of_teams.times do |i|
       @teams << Team.new(@players[i], @players[i+2])
+      @players[i][:team] = i + 1
+      @players[i+2][:team] = i + 1
     end
 
     # draw for dealer
@@ -27,13 +29,13 @@ class Game
     # team wins when their score reaches 120 or more.
     # team can only win if they placed the last bet
 
-    #until @gameOver do
+    #until @game_over do
     1.times do # Play once for testing
       round = Round.new(@players, @teams)
       round.play_round
       @teams.each do |team|
         team.score = team.mate1[:score] + team.mate2[:score]
-        @gameOver = true if team.score >= 120
+        @game_over = true if team.score >= 120
       end
     end
   end
@@ -46,44 +48,57 @@ class Round
     
     @deck = Deck.new
     @kitty = []
-    @bid = { amount: 0, player: nil }
+    @bid = { amount: 0, player: nil, team: nil }
 
-    # move dealer to end of array keeping player order
+
+    # move dealer
+    @players.each do |player|
+      @dealer = player if player[:dealer]
+    end
+    move_player_to_back(@dealer)
+  end
+
+  def move_player_to_back(player)
     temp_array = @players.dup
-    @players.reverse_each do |player|
-      unless player[:dealer]
+    @players.reverse_each do |p|
+      unless p == player
         popped_player = temp_array.pop
         temp_array.unshift(popped_player)
       else
-        @dealer = player
         break
       end
     end
     @players = temp_array.dup
   end
 
-  def move_winner_to_front(winner)
-    @players.reverse_each do |player|
+  def move_player_to_front(player)
+    @players.reverse_each do
       popped_player = @players.pop
       @players.unshift(popped_player)
-      if popped_player == winner
+      if popped_player == player
         break
       end
     end
   end
 
   def play_round
+    puts "Dealer is #{@dealer}"
     @dealer.deal(@deck, @players, @kitty)
 
+    # Show human player's hand before bidding
+    @players.each do |player|
+      player.show_hand if player[:human]
+    end
     bidding(@players)
+    move_player_to_front(@bid[:player])
 
     trump = [:clubs, :spades, :hearts, :diamonds].shuffle!.pop
-    puts "Dealer is #{@dealer}"
     puts "Trump is #{trump.to_s.upcase}"
+    puts "#{@bid[:player]} goes first"
     5.times do
       trick = Trick.new(@players, @teams)
       winner = trick.play_trick(trump)
-      move_winner_to_front(winner)
+      move_player_to_front(winner)
     end
 
     # index of dealer
@@ -98,7 +113,7 @@ class Round
 
   def bidding(players)
     # make sure they are ordered properly with dealer bidding last
-    last_bet = 0
+    last_bid = 0
     bidding_player = nil
     players.each do |player|
       if player[:human]
@@ -107,55 +122,65 @@ class Round
         msg = 'Bid (0|20|25|30): '
         until valid
           begin
-            puts error+msg
-            bet = Integer(gets)
+            print error+msg
+            bid = Integer(gets)
             puts
           rescue
             error = "Invalid input.\n"
             retry
           end
-          if bet == 0 || bet == 20 || bet == 25 || bet == 30
-            if bet == 0 # pass
+          if bid == 0 || bid == 20 || bid == 25 || bid == 30
+            if bid == 0 # pass
               valid = true
-            elsif bet == last_bet
+            elsif bid == last_bid
               if player[:dealer]
                 puts 'Mine.'
                 bidding_over = false
                 until bidding_over
                   # last bidder gets chance to bid higher than dealer
                   # then dealer get chance to say "Mine." again then repeat
-                  # until bet == 30 or dealer says "Go on."
-                  # bet = Integer(gets)
+                  # until bid == 30 or dealer says "Go on."
+                  # bid = Integer(gets)
                   # . . . not useful when only one human player
                   bidding_over = true
                 end
-                last_bet = bet
+                last_bid = bid
                 bidding_player = player
                 valid = true
               else
-                error = "Bid higher than #{last_bet}\n"
+                error = "Bid higher than #{last_bid}\n"
               end
-            elsif bet > last_bet
+            elsif bid > last_bid
               valid = true
-              last_bet = bet
+              last_bid = bid
               bidding_player = player
             else
-              error = "Bid higher than #{last_bet}\n"
+              error = "Bid higher than #{last_bid}\n"
             end
           else
             error = "Invalid input.\n"
           end
         end
       else # player is not human
-        bet = [0, 20].shuffle.pop if last_bet == 0
+        if last_bid == 0
+          bid = [0, 20].shuffle.pop
+          if bid > last_bid
+            last_bid = bid
+            bidding_player = player
+          end
+        else
+          bid = 0
+        end
       end
+      puts "#{player[:name]} bids #{bid}"
     end
-    if last_bet == 0
-      last_bet = 20
+    if last_bid == 0
+      last_bid = 20
       bidding_player = players.last # dealer
     end
-    @bid.update(amount: last_bet, player: bidding_player)
-    puts "#{@bid[:player]} bids #{@bid[:amount]}"
+    team = bidding_player[:team]
+    @bid.update(amount: last_bid, player: bidding_player, team: team)
+    puts "Team #{@bid[:team]} wins bid with #{@bid[:amount]}"
   end
 end
 
@@ -180,7 +205,7 @@ class Trick
         end
         card_laid.set_value(trump, trick[0])
         trick << card_laid
-        puts "Player #{player[:name]} laid #{card_laid}. Value: #{card_laid[:value]}"
+        puts "#{player[:name]} laid #{card_laid}. Value: #{card_laid[:value]}"
         
         winning_card ||= card_laid
         winning_player ||= player
@@ -278,10 +303,11 @@ class Team
 end
 
 class Player < Hash
-  # should have :name, :dealer, :score, :human
+  # should have :name, :team, :dealer, :score, :human
   attr_accessor :hand
   def initialize(name)
     self[:name] = name
+    self[:team] = nil
     self[:dealer] = false
     self[:score] = 0
     @hand = []
@@ -303,11 +329,14 @@ class Player < Hash
   end
 
   def show_hand
-    @hand.each do |card|
-      print "| #{card} "
+    chars = @hand.join(" ").length + @hand.length*6 + 2
+    puts '#' * chars
+    print '| '
+    @hand.each.with_index do |card, i|
+      print "(#{i+1}) #{card} | "
     end
-    print '|'
-    puts
+    puts 
+    puts '#' * chars
   end
 
   def lay_card
@@ -338,7 +367,7 @@ class Player < Hash
         score ||= 5
       end
     end
-    puts "#{self[:name]} scored #{score} points!\n"
+    puts "#{self[:name]} scored #{score} points!"; puts
     self[:score] += score
   end
 end
