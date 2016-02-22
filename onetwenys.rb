@@ -95,8 +95,8 @@ class Round
     bidding(@players)
     move_player_to_front(@bid[:player])
 
-    trump = [:clubs, :spades, :hearts, :diamonds].shuffle!.pop
-    puts "Trump is #{trump.to_s.upcase}"
+    trump = @bid[:player].choose_trump
+
     puts "#{@bid[:player]} goes first"
     5.times do
       trick = Trick.new(@players, @teams)
@@ -205,9 +205,6 @@ class Round
     end
     @bid.update(amount: last_bid, player: bidding_player, team: bidding_player[:team])
     puts "Team #{@bid[:team]} wins bid with #{@bid[:amount]}"
-  end
-
-  def pick_trump
   end
 end
 
@@ -367,6 +364,38 @@ class Player < Hash
     3.times do
       kitty << deck.cards.pop
     end
+  end
+
+  def choose_trump
+    if self[:human]
+      suits = %w(clubs spades hearts diamonds)
+      chars = suits.join(' ').length + suits.length*6 + 2
+      puts '=' * chars
+      print '| '
+      suits.each.with_index do |suit, i|
+        print "(#{i+1}) #{suit} | "
+      end
+      puts
+      puts '=' * chars
+      begin
+        valid = false
+        until valid
+          print 'What is trump? '
+          num = Integer(gets)
+          puts
+          if num == 1 || num == 2 || num == 3 || num == 4
+            trump = suits.fetch(num-1).to_sym
+            valid = true
+          end
+        end
+      rescue
+        retry
+      end
+    else
+      trump = [:clubs, :spades, :hearts, :diamonds].shuffle!.pop
+    end
+    puts "Trump is #{trump.to_s.capitalize}"
+    trump
   end
 
   def show_hand
