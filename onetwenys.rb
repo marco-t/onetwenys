@@ -55,9 +55,7 @@ class Round
 
 
     # move dealer to end of array
-    @players.each do |player|
-      @dealer = player if player[:dealer]
-    end
+    @players.each { |player| @dealer = player if player[:dealer] }
     move_player_to_back(@dealer)
   end
 
@@ -89,9 +87,7 @@ class Round
     @dealer.deal(@deck, @players, @kitty)
 
     # Show human player's hand before bidding
-    @players.each do |player|
-      player.show_hand if player[:human]
-    end
+    @players.each { |player| player.show_hand if player[:human] }
     bidding(@players)
     move_player_to_front(@bid[:player])
 
@@ -102,6 +98,7 @@ class Round
       trick = Trick.new(@players, @teams)
       winner, winner_points = trick.play_trick(trump)
       @scores[winner[:team]] += winner_points
+      puts "#{winner} wins the trick (#{@scores[winner[:team]]} points)"
       move_player_to_front(winner)
     end
 
@@ -127,9 +124,7 @@ class Round
     end
 
     # index of dealer
-    d = @players.index do |player|
-      player[:dealer]
-    end
+    d = @players.index { |player| player[:dealer] }
 
     # if last player was dealer make first player dealer, otherwise next player deals
     @players[d][:dealer] = false
@@ -204,7 +199,7 @@ class Round
       bidding_player = players.last # dealer
     end
     @bid.update(amount: last_bid, player: bidding_player, team: bidding_player[:team])
-    puts "Team #{@bid[:team]} wins bid with #{@bid[:amount]}"
+    puts "#{@bid[:team]} wins bid with #{@bid[:amount]}"
   end
 end
 
@@ -239,7 +234,6 @@ class Trick
         end
       end
     end
-    puts "#{winning_player} wins the trick"
     return winning_player, trick_points(trick)
   end
 
@@ -326,16 +320,6 @@ class Team
     @mate2 = teammate2
     @score = 0
   end
-
-  def thirty_for_sixty
-    # if team bids 30 and wins all tricks in the round they get 60 points
-    new_score = @mate1[:score] + @mate2[:score]
-    if new_score - score == 30
-      @mate1[:score] += 15
-      @mate2[:score] += 15
-    end
-    score = @mate1[:score] + @mate2[:score]
-  end
 end
 
 class Player < Hash
@@ -361,9 +345,7 @@ class Player < Hash
     end
 
     # add three cards to empty kitty
-    3.times do
-      kitty << deck.cards.pop
-    end
+    3.times { kitty << deck.cards.pop }
   end
 
   def choose_trump
