@@ -53,6 +53,7 @@ class Round
       @scores[team] = 0
     end
 
+    # # # Look into Array#roate # # #
 
     # move dealer to end of array
     @players.each { |player| @dealer = player if player[:dealer] }
@@ -135,6 +136,8 @@ class Round
   end
 
   def bidding(players)
+    # # # Look into Array#cycle and Array#rotate for bidding loop # # #
+
     # make sure they are ordered properly with dealer bidding last
     last_bid = 0
     bidding_player = nil
@@ -217,18 +220,15 @@ class Trick
     winning_player = nil
     trick = []
     until trick.count == @players.count do
-      winning_card, winning_player = nil, nil
+      winning_card, winning_player, first_card = nil, nil, nil
       @players.each.with_index do |player, i|
-        if player[:human]
-          player.show_hand
-          card_laid = player.lay_card
-        else
-          card_laid = player.ai_lay_card
-        end
+        player.show_hand if player[:human]
+        card_laid = player.lay_card(trump, first_card)
         card_laid.set_value(trump, trick[0]) if card_laid[:value].nil?
         trick << card_laid
         puts "#{player[:name]} laid #{card_laid}. Value: #{card_laid[:value]}"
         
+        first_card ||= card_laid
         winning_card ||= card_laid
         winning_player ||= player
         if card_laid[:value] > winning_card[:value]
@@ -384,10 +384,12 @@ class Player < Hash
 
   def take_kitty(kitty)
     @hand = @hand + kitty
-    show_hand
+    show_hand if self[:human]
   end
 
   def discard_draw_cards(deck, trump)
+    # cards with no or low value are automatically discarded
+    # player dealt new cards until hand is full
     temp_card = Card.new
     temp_card[:suit] = trump
     @hand.each { |card| card.set_value(trump, temp_card) }
@@ -412,22 +414,35 @@ class Player < Hash
     puts '#' * chars
   end
 
-  def lay_card
+  def lay_card(trump, first_card = nil)
     card = nil
-    until (1..@hand.length).include? card
-      begin
-        print "Choose a card (between 1 and #{@hand.length}): "
-        card = Integer(gets)
-        puts
-      rescue
-        retry
+    if self[:human]
+      until (1..@hand.length).include? card
+        begin
+          print "Choose a card (between 1 and #{@hand.length}): "
+          card = Integer(gets)
+          puts
+        rescue
+          retry
+        end
+      end
+      card -= 1
+    else
+      card = rand(@hand.length)
+    end
+    unless first_card.nil?
+      # if first card laid is trump players have to follow with trump if they have one
+      if first_card[:suit] == trump
+        puts "@hand.slice(card): #{@hand.slice(card)}"
+        if @hand.slice(card)[:suit] != trump
+          trump_cards = @hand.drop_while { |c| c[:suit] != trump }
+          if trump_cards.length > 0
+            return lay_card(trump, first_card)
+          end
+        end
       end
     end
-    @hand.slice!(card-1)
-  end
-
-  def ai_lay_card
-    @hand.pop
+    @hand.slice!(card)
   end
 end
 
