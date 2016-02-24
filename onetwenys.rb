@@ -1,9 +1,6 @@
-# use linked lists to pass dealer button and take turns??
-
 class Game
   # number of players must be even
   def initialize(number_of_players)
-    @game_over = false
     @players = []
     number_of_players.times do |i|
       name = "Player #{i+1}"
@@ -29,12 +26,13 @@ class Game
     # team wins when their score reaches 120 or more.
     # team can only win if they placed the last bet
 
+    game_over = false
     #until @game_over do
     1.times do # Play once for testing
       round = Round.new(@players, @teams)
       round.play_round
       @teams.each do |team|
-        @game_over = true if team.score >= 120
+        game_over = true if team.score >= 120
       end
     end
   end
@@ -101,7 +99,7 @@ class Round
       trick = Trick.new(@players, @teams)
       winner, winner_points = trick.play_trick(trump)
       @scores[winner[:team]] += winner_points
-      puts "#{winner} wins the trick (#{@scores[winner[:team]]} points)"
+      puts "#{winner} wins the trick (#{@scores[winner[:team]]} points)"; puts
       move_player_to_front(winner)
     end
 
@@ -205,7 +203,7 @@ class Round
       bidding_player = players.last # dealer
     end
     @bid.update(amount: last_bid, player: bidding_player, team: bidding_player[:team])
-    puts "#{@bid[:team]} wins bid with #{@bid[:amount]}"
+    puts "#{@bid[:player]} wins bid with #{@bid[:amount]}"
   end
 end
 
@@ -222,7 +220,6 @@ class Trick
     until trick.count == @players.count do
       winning_card, winning_player, first_card = nil, nil, nil
       @players.each.with_index do |player, i|
-        player.show_hand if player[:human]
         card_laid = player.lay_card(trump, first_card)
         card_laid.set_value(trump, trick[0]) if card_laid[:value].nil?
         trick << card_laid
@@ -401,52 +398,113 @@ class Player < Hash
     else
       @hand << deck.cards.pop until @hand.length == 5
     end
+    @hand.each do |card|
+      if card[:suit] == trump || card[:abrv] == :Ah
+        card.set_value(trump, temp_card)
+      end
+    end
   end
 
-  def show_hand
-    chars = @hand.join(" ").length + @hand.length*6 + 2
+  def show_hand(h = nil)
+    if h.nil?
+      hand = @hand
+    else
+      hand = h
+    end
+    chars = hand.join(" ").length + hand.length*6 + 2
     puts '#' * chars
     print '| '
-    @hand.each.with_index do |card, i|
+    hand.each.with_index do |card, i|
       print "(#{i+1}) #{card} | "
     end
     puts 
     puts '#' * chars
   end
 
+  # needs to be refactored more than anything has ever needed to be refactored before
   def lay_card(trump, first_card = nil)
     card = nil
-    if self[:human]
-      until (1..@hand.length).include? card
-        begin
-          print "Choose a card (between 1 and #{@hand.length}): "
-          card = Integer(gets)
-          puts
-        rescue
-          retry
-        end
-      end
-      card -= 1
-    else
-      card = rand(@hand.length)
-    end
-    unless first_card.nil?
-      # if first card laid is trump players have to follow with trump if they have one
-      if first_card[:suit] == trump
-        puts "@hand.slice(card): #{@hand.slice(card)}"
-        if @hand.slice(card)[:suit] != trump
-          trump_cards = @hand.drop_while { |c| c[:suit] != trump }
-          if trump_cards.length > 0
-            return lay_card(trump, first_card)
+
+    if first_card.nil?
+      possible_cards = @hand.dup
+      if self[:human]
+        until (1..possible_cards.length).include? card
+          show_hand
+          begin
+            print "Choose a card (between 1 and #{possible_cards.length}): "
+            card = Integer(gets)
+            puts
+          rescue
+            retry
           end
         end
+        card -= 1
+      else
+        card = rand(possible_cards.length)
+      end
+    else
+      if first_card[:suit] == trump
+        possible_cards = @hand.reject { |c| c[:suit] != trump }
+        if possible_cards.length > 0
+          if self[:human]
+            until (1..possible_cards.length).include? card
+              show_hand(possible_cards)
+              begin
+                print "Choose a card (between 1 and #{possible_cards.length}): "
+                card = Integer(gets)
+                puts
+              rescue
+                retry
+              end
+            end
+            card -= 1
+          else
+            card = rand(possible_cards.length)
+          end
+        else
+          possible_cards = @hand.dup
+          if self[:human]
+            until (1..possible_cards.length).include? card
+              show_hand(possible_cards)
+              begin
+                print "Choose a card (between 1 and #{possible_cards.length}): "
+                card = Integer(gets)
+                puts
+              rescue
+                retry
+              end
+            end
+            card -= 1
+          else
+            card = rand(possible_cards.length)
+          end
+        end
+      else
+        possible_cards = @hand.dup
+        if self[:human]
+          until (1..possible_cards.length).include? card
+            show_hand(possible_cards)
+            begin
+              print "Choose a card (between 1 and #{possible_cards.length}): "
+              card = Integer(gets)
+              puts
+            rescue
+              retry
+            end
+          end
+          card -= 1
+        else
+          card = rand(possible_cards.length)
+        end
       end
     end
-    @hand.slice!(card)
+    card_played = possible_cards.slice!(card)
+    @hand.delete(card_played)
+    card_played
   end
 end
 
-puts
-number_of_players = 4
-game = Game.new(number_of_players)
-game.play_game
+# puts
+# number_of_players = 4
+# game = Game.new(number_of_players)
+# game.play_game
