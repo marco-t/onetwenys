@@ -219,7 +219,7 @@ class Trick
     trick = []
     until trick.count == @players.count do
       winning_card, winning_player, first_card = nil, nil, nil
-      @players.each.with_index do |player, i|
+      @players.each do |player|
         card_laid = player.lay_card(trump, first_card)
         card_laid.set_value(trump, trick[0]) if card_laid[:value].nil?
         trick << card_laid
@@ -503,8 +503,3 @@ class Player < Hash
     card_played
   end
 end
-
-# puts
-# number_of_players = 4
-# game = Game.new(number_of_players)
-# game.play_game
