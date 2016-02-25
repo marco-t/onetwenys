@@ -422,83 +422,44 @@ class Player < Hash
 
   # needs to be refactored more than anything has ever needed to be refactored before
   def lay_card(trump, first_card = nil)
-    card = nil
-
+    possible_cards = @hand.dup
     if first_card.nil?
-      possible_cards = @hand.dup
-      if self[:human]
-        until (1..possible_cards.length).include? card
-          show_hand
-          begin
-            print "Choose a card (between 1 and #{possible_cards.length}): "
-            card = Integer(gets)
-            puts
-          rescue
-            retry
-          end
-        end
-        card -= 1
-      else
-        card = rand(possible_cards.length)
-      end
+      card = choose_card(possible_cards)
     else
-      if first_card[:suit] == trump
+      if first_card[:suit] == trump # change to first_card[:trump]
         possible_cards = @hand.reject { |c| c[:suit] != trump }
         if possible_cards.length > 0
-          if self[:human]
-            until (1..possible_cards.length).include? card
-              show_hand(possible_cards)
-              begin
-                print "Choose a card (between 1 and #{possible_cards.length}): "
-                card = Integer(gets)
-                puts
-              rescue
-                retry
-              end
-            end
-            card -= 1
-          else
-            card = rand(possible_cards.length)
-          end
+          card = choose_card(possible_cards)
         else
           possible_cards = @hand.dup
-          if self[:human]
-            until (1..possible_cards.length).include? card
-              show_hand(possible_cards)
-              begin
-                print "Choose a card (between 1 and #{possible_cards.length}): "
-                card = Integer(gets)
-                puts
-              rescue
-                retry
-              end
-            end
-            card -= 1
-          else
-            card = rand(possible_cards.length)
-          end
+          card = choose_card(possible_cards)
         end
       else
-        possible_cards = @hand.dup
-        if self[:human]
-          until (1..possible_cards.length).include? card
-            show_hand(possible_cards)
-            begin
-              print "Choose a card (between 1 and #{possible_cards.length}): "
-              card = Integer(gets)
-              puts
-            rescue
-              retry
-            end
-          end
-          card -= 1
-        else
-          card = rand(possible_cards.length)
-        end
+        card = choose_card(possible_cards)
       end
     end
     card_played = possible_cards.slice!(card)
     @hand.delete(card_played)
     card_played
+  end
+
+  def choose_card(cards)
+    card = nil
+    if self[:human]
+      until (1..cards.length).include? card
+        show_hand(cards)
+        begin
+          print "Choose a card (between 1 and #{cards.length}): "
+          card = Integer(gets)
+          puts
+        rescue
+          retry
+        end
+      end
+      card -= 1
+    else
+      card = rand(cards.length)
+    end
+    card
   end
 end
