@@ -51,34 +51,20 @@ class Round
       @scores[team] = 0
     end
 
-    # # # Look into Array#roate # # #
-
     # move dealer to end of array
     @players.each { |player| @dealer = player if player[:dealer] }
     move_player_to_back(@dealer)
   end
 
   def move_player_to_back(player)
-    temp_array = @players.dup
-    @players.reverse_each do |p|
-      unless p == player
-        popped_player = temp_array.pop
-        temp_array.unshift(popped_player)
-      else
-        break
-      end
-    end
-    @players = temp_array.dup
+    i = @players.index(player)
+    @players.rotate!(i)
+    @players.rotate!
   end
 
   def move_player_to_front(player)
-    @players.reverse_each do
-      popped_player = @players.pop
-      @players.unshift(popped_player)
-      if popped_player == player
-        break
-      end
-    end
+    i = @players.index(player)
+    @players.rotate!(i)
   end
 
   def play_round
@@ -99,7 +85,7 @@ class Round
       trick = Trick.new(@players, @teams)
       winner, winner_points = trick.play_trick(trump)
       @scores[winner[:team]] += winner_points
-      puts "#{winner} wins the trick (#{@scores[winner[:team]]} points)"; puts
+      puts "****#{winner} wins the trick (#{@scores[winner[:team]]} points)****"; puts
       move_player_to_front(winner)
     end
 
@@ -134,9 +120,9 @@ class Round
   end
 
   def bidding(players)
-    # # # Look into Array#cycle and Array#rotate for bidding loop # # #
+    # # # Look into Array#rotate for bidding loop # # #
+    # dealer bids last
 
-    # make sure they are ordered properly with dealer bidding last
     last_bid = 0
     bidding_player = nil
     players.each do |player|
@@ -153,7 +139,7 @@ class Round
             error = "Invalid input.\n"
             retry
           end
-          if bid == 0 || bid == 20 || bid == 25 || bid == 30
+          if [0, 20, 25, 30].include? bid
             if bid == 0 # pass
               valid = true
             elsif bid == last_bid
