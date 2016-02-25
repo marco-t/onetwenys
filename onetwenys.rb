@@ -5,7 +5,6 @@ class Game
     number_of_players.times do |i|
       name = "Player #{i+1}"
       @players << Player.new(name)
-      #@players[i][:human] = true # for testing
     end
     @players[0][:human] = true
 

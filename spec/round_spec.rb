@@ -12,6 +12,7 @@ describe Round do
   before(:each) do
     game = Game.new(4)
     @players = game.players
+    @players.each { |p| p[:human] = false }
     @teams = game.teams
     @round = Round.new(@players, @teams)
     @dealer = @round.dealer
