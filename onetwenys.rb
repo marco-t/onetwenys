@@ -105,8 +105,12 @@ class Round
         end
       else
         # non-bidding team gets their points
-        team.score += @scores[team]
-        puts "Team #{i+1} gained #{@scores[team]} points"
+        if team.score + @scores[team] < 120
+          team.score += @scores[team] 
+          puts "Team #{i+1} gained #{@scores[team]} points"
+        else
+          puts "Team #{i+1} needs to bid to win"
+        end
       end
       puts "Team #{i+1} has #{team.score} points"
     end
@@ -120,76 +124,58 @@ class Round
   end
 
   def bidding(players)
-    # # # Look into Array#rotate for bidding loop # # #
-    # dealer bids last
-
-    last_bid = 0
-    bidding_player = nil
+    bids = []
+    amounts = [20, 25, 30]
     players.each do |player|
-      if player[:human]
-        valid = false
-        error = ''
-        msg = 'Bid (0|20|25|30): '
-        until valid
-          begin
-            print error+msg
-            bid = Integer(gets)
-            puts
-          rescue
-            error = "Invalid input.\n"
-            retry
+      bid = {}
+      if !player[:dealer] && amounts.size > 0 # unless player[:dealer] && amounts.size < 1 ???
+        amounts.unshift(0)
+        amount = player.choose_bid(amounts)
+        amounts.delete_if { |n| n <= amount }
+
+        bid[:player] = player
+        bid[:amount] = amount
+        bids << bid unless bid[:amount] == 0
+        puts "#{player[:name]} bids #{amount}"
+      end
+      if player[:dealer]
+        loop do
+          dealer_amounts = [20, 25, 30]
+          if bids.size > 0
+            # don't pass if no one else bid
+            dealer_amounts.delete_if { |n| n < bids.last[:amount] }
+            dealer_amounts.unshift(0)
           end
-          if [0, 20, 25, 30].include? bid
-            if bid == 0 # pass
-              valid = true
-            elsif bid == last_bid
-              if player[:dealer]
-                puts 'Mine.'
-                bidding_over = false
-                until bidding_over
-                  # last bidder gets chance to bid higher than dealer
-                  # then dealer get chance to say "Mine." again then repeat
-                  # until bid == 30 or dealer says "Go on."
-                  # bid = Integer(gets)
-                  # . . . not useful when only one human player
-                  bidding_over = true
-                end
-                last_bid = bid
-                bidding_player = player
-                valid = true
-              else
-                error = "Bid higher than #{last_bid}\n"
-              end
-            elsif bid > last_bid
-              valid = true
-              last_bid = bid
-              bidding_player = player
-            else
-              error = "Bid higher than #{last_bid}\n"
-            end
+          amount = player.choose_bid(dealer_amounts)
+          if amount == 0
+            puts "Go on"
+            break
           else
-            error = "Invalid input.\n"
+            bid[:player] = player
+            bid[:amount] = amount
+            if bids.size > 0
+              puts "Mine" if amount == bids.last[:amount]
+              last_bidder = bids.last[:player]
+            end
+            puts "#{player[:name]} bids #{amount}"
+            bids << bid
+            break if amount == 30
+            amounts.delete_if { |n| n <= amount }
+            break if bids.size == 1
           end
-        end
-      else # player is not human
-        if last_bid == 0
-          bid = [0, 20].shuffle.pop
-          if bid > last_bid
-            last_bid = bid
-            bidding_player = player
-          end
-        else
-          bid = 0
+          # last bidder can bid higher or pass
+          amount = last_bidder.choose_bid(amounts) # 0 should be in there already
+          bid[:player] = last_bidder
+          bid[:amount] = amount
+          puts "#{last_bidder[:name]} bids #{amount}"
+          bids << bid
         end
       end
-      puts "#{player[:name]} bids #{bid}"
     end
-    if last_bid == 0
-      last_bid = 20
-      bidding_player = players.last # dealer
-    end
-    @bid.update(amount: last_bid, player: bidding_player, team: bidding_player[:team])
-    puts "#{@bid[:player]} wins bid with #{@bid[:amount]}"
+    winning_player = bids.last[:player]
+    winning_bid = bids.last[:amount]
+    winning_team = winning_player[:team]
+    @bid.update(amount: winning_bid, player: winning_player, team: winning_team)
   end
 end
 
@@ -201,7 +187,7 @@ class Trick
 
   # each player lays a card. Winner and winner's points are returned
   def play_trick(trump)
-    winning_player = nil
+    winning_player = nil # probably don't need this
     trick = []
     until trick.count == @players.count do
       winning_card, winning_player, first_card = nil, nil, nil
@@ -333,6 +319,33 @@ class Player < Hash
     3.times { kitty << deck.cards.pop }
   end
 
+  def choose_bid(allowed_bids)
+    if self[:human]
+      valid = false
+      error = ''
+      msg = "Bid #{allowed_bids.join('|')}: "
+      until valid
+        begin
+          print "#{error}\n#{msg}"
+          bid = Integer(gets)
+          error = ''
+          puts
+        rescue
+          error = "Invalid input"
+          retry
+        end
+        if allowed_bids.include? bid
+          valid = true
+        else
+          error = "Invalid input"
+        end
+      end
+    else
+      bid = allowed_bids.shuffle.sample
+    end
+    bid
+  end
+
   def choose_trump
     if self[:human]
       suits = %w(clubs spades hearts diamonds)
@@ -350,7 +363,7 @@ class Player < Hash
           print 'What is trump? '
           num = Integer(gets)
           puts
-          if num == 1 || num == 2 || num == 3 || num == 4
+          if [1, 2, 3, 4].include? num
             trump = suits.fetch(num-1).to_sym
             valid = true
           end
@@ -391,11 +404,11 @@ class Player < Hash
     end
   end
 
-  def show_hand(h = nil)
-    if h.nil?
+  def show_hand(possible_cards = nil)
+    if possible_cards.nil?
       hand = @hand
     else
-      hand = h
+      hand = possible_cards
     end
     chars = hand.join(" ").length + hand.length*6 + 2
     puts '#' * chars

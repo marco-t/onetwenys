@@ -5,7 +5,7 @@ class Game
 end
 
 class Round
-  attr_accessor :dealer
+  attr_accessor :dealer, :bid
 end
 
 describe Round do
@@ -18,6 +18,7 @@ describe Round do
   end
 
   it { expect(@round).to be_an_instance_of(Round) }
+
   it 'dealer should be set' do
     expect(@dealer).to be_truthy
   end
@@ -42,4 +43,10 @@ describe Round do
     expect(players_reordered.first).to equal player4
   end
 
+  context 'bidding' do
+    it '@bid should not be empty' do
+      @round.bidding(@players)
+      expect(@round.bid).not_to be_empty
+    end
+  end
 end
