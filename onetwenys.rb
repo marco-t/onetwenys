@@ -5,6 +5,7 @@ class Game
     number_of_players.times do |i|
       name = "Player #{i+1}"
       @players << Player.new(name)
+      #@players[i][:human] = true # for testing
     end
     @players[0][:human] = true
 
@@ -235,7 +236,7 @@ class Deck
         abrv = (number.to_s + suit.to_s.chr).to_sym
         suit == :clubs || suit == :spades ? color = :black : color = :red
         card = Card.new
-        card.update(name: abrv, number: number, suit: suit, color: color, value: nil)
+        card.update(name: abrv, number: number, suit: suit, color: color, trump: false, value: nil)
         @cards << card
       end
     end
@@ -249,6 +250,7 @@ class Card < Hash
   end
 
   def set_value(trump, first_card = nil)
+    self[:trump] = true if self[:suit] == trump
     # sets first suit to card's suit if no other card was played
     first_card.nil? ? first_suit = self[:suit] : first_suit = first_card[:suit]
     
@@ -259,8 +261,9 @@ class Card < Hash
                    '5' => 6, '6' => 5, '7' => 4, '8' => 3, '9' => 2, '10' => 1  }
 
     if self[:name] == :Ah
+      self[:trump] = true
       self[:value] = 50
-    elsif self[:suit] == trump
+    elsif self[:trump]
       if self[:number] == '5'
         self[:value] = 52
       elsif self[:number] == 'J'
@@ -384,24 +387,50 @@ class Player < Hash
   end
 
   def discard_draw_cards(deck, trump)
-    # cards with no or low value are automatically discarded
-    # player dealt new cards until hand is full
     temp_card = Card.new
     temp_card[:suit] = trump
-    @hand.each { |card| card.set_value(trump, temp_card) }
-    @hand.keep_if { |card| card[:value] > 0 }
-    @hand.sort_by! { |card| card[:value] }.reverse! 
-    if @hand.length > 5
-      # bidder might have more than 5 cards
-      @hand.pop until @hand.length == 5
-    else
-      @hand << deck.cards.pop until @hand.length == 5
-    end
+
+    discard_cards(trump, temp_card)
+    draw_cards(deck)
+
     @hand.each do |card|
-      if card[:suit] == trump || card[:abrv] == :Ah
+      if card[:suit] == trump || card[:abrv] == :Ah # <-- probably unnecessary
         card.set_value(trump, temp_card)
       end
     end
+  end
+
+  def discard_cards(trump, temp_card)
+    if self[:human]
+      discard = nil
+      until discard == 0
+        show_hand(@hand)
+        @hand.size <= 5 ? min = 0 : min = 1
+        max = @hand.size
+        discard = nil
+        until (min..max).include? discard
+          begin
+            puts "Pick a card to discard (#{min} - #{max})"
+            discard = Integer(gets)
+            puts
+          rescue
+            retry
+          end
+        end
+        @hand.delete_at(discard-1) unless discard == 0
+      end
+    else
+      # cards with no or low value are automatically discarded
+      @hand.each { |card| card.set_value(trump, temp_card) }
+      @hand.keep_if { |card| card[:value] > 0 }
+      @hand.sort_by! { |card| card[:value] }.reverse!
+      @hand.pop until @hand.length <= 5
+    end
+  end
+
+  def draw_cards(deck)
+    # player dealt new cards until hand is full
+    @hand << deck.cards.pop until @hand.length >= 5
   end
 
   def show_hand(possible_cards = nil)
@@ -420,15 +449,20 @@ class Player < Hash
     puts '#' * chars
   end
 
-  # needs to be refactored more than anything has ever needed to be refactored before
   def lay_card(trump, first_card = nil)
     possible_cards = @hand.dup
     if first_card.nil?
       card = choose_card(possible_cards)
     else
-      if first_card[:suit] == trump # change to first_card[:trump]
-        possible_cards = @hand.reject { |c| c[:suit] != trump }
+      if first_card[:trump]
+        possible_cards = @hand.reject { |c| c[:trump] == false }
         if possible_cards.length > 0
+          trumps_above_first_card = 0
+          possible_cards.each do |c|
+            trumps_above_first_card += 1 if c[:value] >= 50 && c[:value] > first_card[:value]
+          end
+          # renegging
+          possible_cards = @hand.dup if trumps_above_first_card == possible_cards.size
           card = choose_card(possible_cards)
         else
           possible_cards = @hand.dup
