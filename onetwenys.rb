@@ -1,24 +1,41 @@
 class Game
-  # number of players must be even
-  def initialize(number_of_players)
+  def initialize(human_players, teams = true)
+    create_players(human_players)
+    teams ? play_with_teams : play_without_teams
+    draw_for_dealer
+  end
+
+  def create_players(human_players)
+    total_players = 4
     @players = []
-    number_of_players.times do |i|
+    total_players.times do |i|
       name = "Player #{i+1}"
       @players << Player.new(name)
+      @players[i][:human] = true if i+1 <= human_players
     end
-    @players[0][:human] = true
+  end
 
-    # assign teams
-    number_of_teams = number_of_players / 2
+  def play_with_teams
     @teams = []
-    number_of_teams.times do |i|
+    2.times do |i|
       @teams << Team.new(@players[i], @players[i+2])
+      @teams[i].name = "Team #{i+1}"
       @players[i][:team] = @teams[i]
       @players[i+2][:team] = @teams[i]
     end
+  end
 
-    # draw for dealer
-    rand = rand(number_of_players)
+  def play_without_teams
+    @teams = []
+    4.times do |i|
+      @teams << Team.new(@players[i])
+      @teams[i].name = "Team #{i+1}"
+      @players[i][:team] = @teams[i]
+    end
+  end
+
+  def draw_for_dealer
+    rand = rand(@players.size)
     @players[rand][:dealer] = true
   end
 
@@ -27,13 +44,10 @@ class Game
     # team can only win if they placed the last bet
 
     game_over = false
-    #until @game_over do
+    #until game_over do
     1.times do # Play once for testing
       round = Round.new(@players, @teams)
-      round.play_round
-      @teams.each do |team|
-        game_over = true if team.score >= 120
-      end
+      game_over = round.play_round
     end
   end
 end
@@ -48,7 +62,7 @@ class Round
     @bid = { amount: 0, player: nil, team: nil }
     @scores = {}
     @teams.each do |team|
-      @scores[team] = 0
+      @scores[team] = 0 # @scores is difficult to understand
     end
 
     # move dealer to end of array
@@ -73,54 +87,63 @@ class Round
 
     # Show human player's hand before bidding
     @players.each { |player| player.show_hand if player[:human] }
-    bidding(@players)
-    move_player_to_front(@bid[:player])
+    winning_bidder = bidding(@players)
+    move_player_to_front(winning_bidder)
 
-    trump = @bid[:player].choose_trump
-    @bid[:player].take_kitty(@kitty)
+    trump = winning_bidder.choose_trump
+    winning_bidder.take_kitty(@kitty)
     @players.each { |player| player.discard_draw_cards(@deck, trump) }
 
-    puts "#{@bid[:player]} goes first"
+    puts "#{winning_bidder} goes first"
     5.times do
       trick = Trick.new(@players, @teams)
       winner, winner_points = trick.play_trick(trump)
       @scores[winner[:team]] += winner_points
-      puts "****#{winner} wins the trick (#{@scores[winner[:team]]} points)****"; puts
+      puts "\n#{winner} wins the trick (#{@scores[winner[:team]]} points)\n"
+      puts '-' * 44; puts
       move_player_to_front(winner)
     end
 
-    # add or subtract to each team's score
-    @teams.each.with_index do |team, i|
+    adjust_team_scores
+    move_dealer_to_next_player
+    return game_over?
+  end
+
+  def adjust_team_scores
+    @teams.each do |team|
       if team == @bid[:team]
         if @scores[team] >= @bid[:amount]
-          # if team bid 30 and win all tricks they get 60 points
-          @scores[team] = 60 if @bid[:amount] == 30
-          # bidding team gains if they reached their bid
+          @scores[team] = 60 if @bid[:amount] == 30 
           team.score += @scores[team]
-          puts "Team #{i+1} gained #{@scores[team]} points"
+          print "#{team} gained #{@scores[team]} points "
         else
-          # they lose points if they didn't reach their bid
           team.score -= @bid[:amount]
-          puts "Team #{i+1} lost #{@bid[:amount]} points"
+          print "#{team} lost #{@bid[:amount]} points "
         end
       else
-        # non-bidding team gets their points
         if team.score + @scores[team] < 120
           team.score += @scores[team] 
-          puts "Team #{i+1} gained #{@scores[team]} points"
+          print "#{team} gained #{@scores[team]} points "
         else
-          puts "Team #{i+1} needs to bid to win"
+          print "*** #{team} needs to bid to win *** "
         end
       end
-      puts "Team #{i+1} has #{team.score} points"
+      puts "(#{team.score} points)"
     end
+  end
 
-    # index of dealer
-    d = @players.index { |player| player[:dealer] }
-
+  def move_dealer_to_next_player
     # if last player was dealer make first player dealer, otherwise next player deals
+    d = @players.index { |player| player[:dealer] }
     @players[d][:dealer] = false
     @players[d+1].nil? ? @players[0][:dealer] = true : @players[d+1][:dealer] = true
+  end
+
+  def game_over?
+    @teams.each do |team|
+      return true if team.score >= 120
+    end
+    false
   end
 
   def bidding(players)
@@ -176,6 +199,7 @@ class Round
     winning_bid = bids.last[:amount]
     winning_team = winning_player[:team]
     @bid.update(amount: winning_bid, player: winning_player, team: winning_team)
+    winning_player
   end
 end
 
@@ -191,11 +215,11 @@ class Trick
     trick = []
     until trick.count == @players.count do
       winning_card, winning_player, first_card = nil, nil, nil
-      @players.each do |player|
+      @players.each.with_index do |player, i|
         card_laid = player.lay_card(trump, first_card)
         card_laid.set_value(trump, trick[0]) if card_laid[:value].nil?
         trick << card_laid
-        puts "#{player[:name]} laid #{card_laid}. Value: #{card_laid[:value]}"
+        print_move(player, card_laid, i)
         
         first_card ||= card_laid
         winning_card ||= card_laid
@@ -207,6 +231,13 @@ class Trick
       end
     end
     return winning_player, trick_points(trick)
+  end
+
+  def print_move(player, card_laid, i)
+    spacer = "+" * (i+1)
+    str = "#{spacer} #{player[:name]} laid #{card_laid}"
+    spaces = " " * (34 - str.length)
+    puts "#{str}#{spaces} Value: #{card_laid[:value]}"
   end
 
   def trick_points(trick)
@@ -288,16 +319,23 @@ end
 
 class Team
   # change mate1 and mate2. ugly names
-  attr_accessor :score, :mate1, :mate2
-  def initialize(teammate1, teammate2)
-    @mate1 = teammate1
-    @mate2 = teammate2
+  attr_accessor :name, :score, :mate1, :mate2
+  def initialize(teammate1, teammate2 = nil)
     @score = 0
+    @mate1 = teammate1
+    @mate2 = teammate2 unless teammate2.nil?
+  end
+
+  def to_s
+    no_teams = "#{mate1}"
+    with_teams = "#{@name} (#{mate1}, #{mate2})"
+    return no_teams if mate2.nil?
+    return with_teams
   end
 end
 
 class Player < Hash
-  # should have :name, :team, :dealer, :human
+  # should have [:name], [:team], [:dealer], [:human]
   attr_accessor :hand
   def initialize(name)
     self[:name] = name
@@ -449,6 +487,7 @@ class Player < Hash
   end
 
   def lay_card(trump, first_card = nil)
+    # BUG --> Ah is not a possible card when trump led
     possible_cards = @hand.dup
     if first_card.nil?
       card = choose_card(possible_cards)
