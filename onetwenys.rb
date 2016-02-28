@@ -62,7 +62,7 @@ class Round
     @bid = { amount: 0, player: nil, team: nil }
     @scores = {}
     @teams.each do |team|
-      @scores[team] = 0 # @scores is difficult to understand
+      @scores[team] = 0
     end
 
     # move dealer to end of array
@@ -155,8 +155,7 @@ class Round
         amount = player.choose_bid(amounts)
         amounts.delete_if { |n| n <= amount }
 
-        bid[:player] = player
-        bid[:amount] = amount
+        bid.update(player: player, amount: amount)
         bids << bid unless bid[:amount] == 0
         puts "#{player[:name]} bids #{amount}"
       end
@@ -173,8 +172,7 @@ class Round
             puts "Go on"
             break
           else
-            bid[:player] = player
-            bid[:amount] = amount
+            bid.update(player: player, amount: amount)
             if bids.size > 0
               puts "Mine" if amount == bids.last[:amount]
               last_bidder = bids.last[:player]
@@ -187,8 +185,7 @@ class Round
           end
           # last bidder can bid higher or pass
           amount = last_bidder.choose_bid(amounts) # 0 should be in there already
-          bid[:player] = last_bidder
-          bid[:amount] = amount
+          bid.update(player: last_bidder, amount: amount)
           puts "#{last_bidder[:name]} bids #{amount}"
           bids << bid
         end
@@ -258,14 +255,14 @@ class Deck
 
   def initialize
     suits = [:clubs, :spades, :hearts, :diamonds]
-    numbers = %w(2 3 4 5 6 7 8 9 10 J Q K A)
+    ranks = %w(2 3 4 5 6 7 8 9 10 J Q K A)
     @cards = []
     suits.each do |suit|
-      numbers.each do |number|
-        abrv = (number.to_s + suit.to_s.chr).to_sym
+      ranks.each do |rank|
+        abrv = (rank.to_s + suit.to_s.chr).to_sym
         suit == :clubs || suit == :spades ? color = :black : color = :red
         card = Card.new
-        card.update(name: abrv, number: number, suit: suit, color: color, trump: false, value: nil)
+        card.update(name: abrv, rank: rank, suit: suit, color: color, trump: false, value: nil)
         @cards << card
       end
     end
@@ -275,7 +272,7 @@ end
 
 class Card < Hash
   def to_s
-    "#{self[:number]} of #{self[:suit].to_s.capitalize}"
+    "#{self[:rank]} of #{self[:suit].to_s.capitalize}"
   end
 
   def set_value(trump, first_card = nil)
@@ -294,22 +291,22 @@ class Card < Hash
       puts "A of Hearts trump? #{self[:trump]}"
       self[:value] = 50
     elsif self[:trump]
-      if self[:number] == '5'
+      if self[:rank] == '5'
         self[:value] = 52
-      elsif self[:number] == 'J'
+      elsif self[:rank] == 'J'
         self[:value] = 51
-      elsif self[:number] == 'A'
+      elsif self[:rank] == 'A'
         self[:value] = 49
       elsif self[:color] == :black
-        self[:value] = black_values[self[:number]] + 35
+        self[:value] = black_values[self[:rank]] + 35
       elsif self[:color] == :red
-        self[:value] = red_values[self[:number]] + 35
+        self[:value] = red_values[self[:rank]] + 35
       end
     elsif self[:suit] == first_suit
       if self[:color] == :black
-        self[:value] = black_values[self[:number]]
+        self[:value] = black_values[self[:rank]]
       else
-        self[:value] = red_values[self[:number]]
+        self[:value] = red_values[self[:rank]]
       end
     else
       self[:value] = 0
@@ -323,7 +320,7 @@ class Team
   def initialize(teammate1, teammate2 = nil)
     @score = 0
     @mate1 = teammate1
-    @mate2 = teammate2 unless teammate2.nil?
+    @mate2 = teammate2 unless teammate2.nil? # try 'if teammate2'
   end
 
   def to_s
@@ -509,9 +506,9 @@ class Player < Hash
         card = choose_card(possible_cards)
       end
     end
-    card_played = possible_cards.slice!(card)
-    @hand.delete(card_played)
-    card_played
+    card_laid = possible_cards[card]
+    @hand.delete(card_laid)
+    card_laid
   end
 
   def choose_card(cards)
