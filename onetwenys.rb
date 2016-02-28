@@ -85,7 +85,6 @@ class Round
     puts "Dealer is #{@dealer}"
     @dealer.deal(@deck, @players, @kitty)
 
-    # Show human player's hand before bidding
     @players.each { |player| player.show_hand if player[:human] }
     winning_bidder = bidding(@players)
     move_player_to_front(winning_bidder)
@@ -151,7 +150,7 @@ class Round
     amounts = [20, 25, 30]
     players.each do |player|
       bid = {}
-      if !player[:dealer] && amounts.size > 0 # unless player[:dealer] && amounts.size < 1 ???
+      if !player[:dealer] && amounts.size > 0 # <-- gross
         amounts.unshift(0)
         amount = player.choose_bid(amounts)
         amounts.delete_if { |n| n <= amount }
@@ -292,6 +291,7 @@ class Card < Hash
 
     if self[:name] == :Ah
       self[:trump] = true
+      puts "A of Hearts trump? #{self[:trump]}"
       self[:value] = 50
     elsif self[:trump]
       if self[:number] == '5'
@@ -431,7 +431,7 @@ class Player < Hash
     draw_cards(deck)
 
     @hand.each do |card|
-      if card[:suit] == trump || card[:abrv] == :Ah # <-- probably unnecessary
+      if card[:suit] == trump || card[:name] == :Ah # <-- probably unnecessary
         card.set_value(trump, temp_card)
       end
     end
@@ -487,7 +487,6 @@ class Player < Hash
   end
 
   def lay_card(trump, first_card = nil)
-    # BUG --> Ah is not a possible card when trump led
     possible_cards = @hand.dup
     if first_card.nil?
       card = choose_card(possible_cards)
