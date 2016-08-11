@@ -43,7 +43,14 @@ class Hand
     @cards.sort_by! {|c| c.suit}
   end
   
-  def sort_by_value
+  def sort_by_value!
+    @cards.sort_by! do |card|
+      if card.trump?
+        card.trump_value
+      else
+        card.base_value
+      end
+    end.reverse!
   end
   
   def size
@@ -56,9 +63,9 @@ class Hand
 end
 
 class Card
-  attr_accessor :suit, :rank, :color, :base_value
+  attr_accessor :suit, :rank, :color, :trump, :base_value, :value
   SUITS = ["Hearts", "Clubs", "Diamonds", "Spades"]
-    RANKS = %w(2 3 4 5 6 7 8 9 10 J Q K A)
+    RANKS = %w(A 2 3 4 5 6 7 8 9 10 J Q K)
     RED_VALUES = { 
       'K' => 13, 'Q' => 12, 'J' => 11, '10' => 10,
     '9' => 9, '8' => 8, '7' => 7, '6' => 6,
@@ -74,6 +81,7 @@ class Card
     @suit = SUITS[suit]
     @rank = RANKS[rank]
     @color = get_color
+    @trump = false
     @base_value = get_base_value
   end
   
@@ -85,10 +93,23 @@ class Card
     end
   end
   
-  def get_base_value
-    return RED_VALUES[@rank] if @color == 'red'
-    return BLACK_VALUES[@rank] if @color == 'black'
-    puts "*****BASE VALUE ERROR*****"
+  def trump?
+    @trump
+  end
+  
+  def trump_value
+    if @rank == '5'
+      return 52
+    elsif @rank == 'J'
+      return 51
+    elsif @rank == 'A' 
+      @suit == 'Hearts' ? 50 : 49
+    else
+      return @base_value + 35
+    end
+  end
+  
+  def first_card(cards)
   end
   
   def to_s
@@ -98,26 +119,49 @@ class Card
   def to_abbr
     "#{@rank}#{@suit[0].downcase}"
   end
+  
+  private
+  
+  def get_base_value
+    return RED_VALUES[@rank] if @color == 'red'
+    return BLACK_VALUES[@rank] if @color == 'black'
+    puts "*****BASE VALUE ERROR*****"
+  end
 end
 
 class Deck
-  attr_accessor :cards
   def initialize
-    @cards = []
+    @all = []
     4.times do |suit|
       13.times do |rank|
-        @cards << Card.new(suit, rank)
+        @all << Card.new(suit, rank)
       end
     end
+    @remaining = Array.new(@all)
   end
   
   def shuffle
-    @cards.shuffle!
+    @remaining.shuffle!
     self
   end
   
   def deal_card
-    @cards.shift
+    @remaining.shift
+  end
+  
+  def set_trump_cards(trump_suit)
+    @all.each do |card|
+      if card.suit == trump_suit
+        card.trump = true
+      end
+    end
+    set_Ah_to_trump
+  end
+  
+  private
+  
+  def set_Ah_to_trump
+    @all.first.trump = true
   end
 end
 
@@ -236,6 +280,7 @@ class Onetwenys
     puts winning_bidder.hand
     
     trump = winning_bidder.choose_trump
+    d.set_trump_cards(trump)
     
     sleep 0.25
     puts "\n#{winning_bidder} says \"#{trump.upcase} is trump\"\n "
@@ -262,11 +307,13 @@ class Onetwenys
     Hand::MAX.times do
       puts
       trick_results = play_trick(trump)
-      # trick_winner = trick_results[:winner]
-      # trick_points = trick_results[:points]
-      # round_results[trick_winner] += trick_points
+      trick_winner = trick_results[:winner]
+      trick_points = trick_results[:points]
+      round_results[trick_winner] += trick_points
     end
+    
     #assign points based on bet
+    #tally_points(round_results)
     #move dealer button
   end
   
@@ -332,27 +379,41 @@ class Onetwenys
   def play_trick(trump)
     leading_card = nil
     leading_player = nil
+    points = 5
     
     @players.each do |player|
       card = player.lay_card(0)
+      card.value = card_value(card, leading_card)
+      
+      points = 10 if card.rank == '5' && card.suit == trump
       leading_card ||= card
       leading_player ||= player
       
       sleep 0.25
-      puts "#{player} lays #{card}"
+      puts "#{player} lays #{card} (#{card.value})"
       
-      if card.base_value > leading_card.base_value
+      if card.value > leading_card.value
         leading_card = card
         leading_player = player
       end
     end
     
     sleep 0.25
-    puts "\n*\t #{leading_player} wins trick with #{leading_card}"
-    #{ winner: player, points: points }
+    puts "\n*\t #{leading_player} wins trick with #{leading_card} (#{points} points)"
+
+    { winner: leading_player, points: points }
   end
   
+  def card_value(card, leading_card)
+    return card.trump_value if card.trump?
+    return card.base_value if leading_card.nil?
+    return card.base_value if card.suit == leading_card.suit
+    0
+  end
   
+  def tally_point(round_result)
+    
+  end
 end
 game = Onetwenys.new
 game.play_game
