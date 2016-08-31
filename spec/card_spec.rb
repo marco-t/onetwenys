@@ -1,36 +1,62 @@
-require_relative '../onetwenys'
+require './model/card'
+require './spec/support/card'
 
 describe Card do
-  before(:each) do
-    @card = Card.new
-    @trump = :clubs
-    @card.update(name: :'10c', rank: '10', suit: @trump, color: :black)
+  it "has the right color" do
+    heart   = card("Hearts", "A")
+    club    = card("Clubs", "A")
+    diamond = card("Diamonds", "A")
+    spade   = card("Spades", "A")
+
+    expect(heart.color).to eq 'red'
+    expect(club.color).to eq 'black'
+    expect(diamond.color).to eq 'red'
+    expect(spade.color).to eq 'black'
+  end
+end
+
+describe Card, '#trump?' do
+  it "returns true if card is trump" do
+    card = card("Clubs", "A")
+    card.trump!
+
+    expect(card).to be_trump
   end
 
-  it 'Ace of Hearts should be trump' do
-    @card.update(name: :Ah, rank: 'A', suit: :hearts, color: :red)
-    @card.set_value(@trump)
-    expect(@card[:trump]).to be true
+  it "returns false if card is not trump" do
+    card = card("Clubs", "A")
+
+    expect(card).not_to be_trump
+  end
+end
+
+describe Card, '#value' do
+  it "high in red, low in black" do
+    ten_hearts = card("Hearts", "10")
+    ten_clubs = card("Clubs", "10")
+
+    two_hearts = card("Hearts", "2")
+    two_clubs = card("Clubs", "2")
+
+    expect(ten_hearts.value).to be > ten_clubs.value
+    expect(two_hearts.value).to be < two_clubs.value
   end
 
-  it 'should have value greater than 35' do
-    @card.set_value(@trump)
-    expect(@card[:value]).to be > 35
+  it "trump beats cards of other suit" do
+    ten_hearts = card("Hearts", "10")
+    ten_diamonds = card("Diamonds", "10")
+
+    ten_hearts.trump!
+
+    expect(ten_hearts.value).to be > ten_diamonds.value
   end
 
-  it 'first card laid has value between 0 and 35' do
-    first_card = Card.new
-    first_card.update(name: :'10h', rank: '10', suit: :hearts, color: :red)
-    first_card.set_value(@trump)
-    expect(first_card[:value]).to be > 0
-    expect(first_card[:value]).to be < 35
-  end
+  it "Ace of Hearts beats Ace of Trump" do
+    ace_hearts = card("Hearts", "A")
+    ace_diamonds = card("Diamonds", "A")
+    ace_hearts.trump!
+    ace_diamonds.trump!
 
-  it 'second card has no value if off-suit and not trump' do
-    first_card, second_card = Card.new, Card.new
-    first_card.update(name: :'10h', rank: '10', suit: :hearts, color: :red)
-    second_card.update(name: :'10d', rank: '10', suit: :diamonds, color: :red)
-    second_card.set_value(@trump, first_card)
-    expect(second_card[:value]).to be 0
+    expect(ace_hearts.value).to be > ace_diamonds.value
   end
 end

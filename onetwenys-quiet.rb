@@ -125,7 +125,6 @@ class Card
   def get_base_value
     return RED_VALUES[@rank] if @color == 'red'
     return BLACK_VALUES[@rank] if @color == 'black'
-    puts "*****BASE VALUE ERROR*****"
   end
 end
 
@@ -188,8 +187,6 @@ class Player
       num = rand(possible_bids.size)
       players_bid = possible_bids[num]
     end
-    sleep 0.5
-    puts "#{self} bids #{players_bid}"
     players_bid
   end
   
@@ -216,12 +213,8 @@ class Onetwenys
     @teams = create_teams
     @dealer = draw_for_dealer
     
-    sleep 0.25
-    puts "\nDealer is #{@dealer}"
     
     until goal_reached? do
-      sleep 0.25
-      puts "\n*\t STARTING ROUND"
       play_round
       
       #for test
@@ -233,8 +226,6 @@ class Onetwenys
   
   def create_players
     4.times { |i| 
-      puts "#{'*'*i.next}\t Player #{i.next} created" 
-      sleep 0.1
     }
     4.times.map { |i| Player.new "Player #{i.next}" }
   end
@@ -255,18 +246,12 @@ class Onetwenys
     round_results = Hash.new(0)
     move_player_to_end(@dealer)
     
-    sleep 0.1
-    puts "**\t SHUFFLING DECK"
     
     d = Deck.new.shuffle
     
-    sleep 0.1
-    puts "***\t DEALING HANDS"
     
     deal_hands(d)
     
-    sleep 0.1
-    puts "****\t DEALING KITTY\n "
     
     kitty = deal_kitty(d)
     
@@ -275,38 +260,21 @@ class Onetwenys
     winning_bid = bidding_results[:bid]
     move_player_to_front(winning_bidder)
     
-    sleep 0.25
-    puts "\n#{winning_bidder} wins the bid with #{winning_bid}\n "
-    sleep 0.25
-    puts winning_bidder.hand
     
     trump = winning_bidder.choose_trump
     d.set_trump_cards(trump)
     
-    sleep 0.25
-    puts "\n#{winning_bidder} says \"#{trump.upcase} is trump\"\n "
     
     winning_bidder.hand.add_cards(kitty.remove_cards)
     
-    sleep 0.25
-    puts winning_bidder.hand
     
-    sleep 0.25
-    puts "\n*\t DISCARDING CARDS\n "
     discard_cards
     
-    sleep 0.25
-    puts winning_bidder.hand
     
-    sleep 0.25
-    puts "\n*\t DEALING NEW CARDS\n "
     refill_hands(d)
     
-    sleep 0.25
-    puts winning_bidder.hand
     
     Hand::MAX.times do
-      puts
       trick_results = play_trick(trump)
       trick_winner = trick_results[:winner]
       trick_points = trick_results[:points]
@@ -390,8 +358,6 @@ class Onetwenys
       leading_card ||= card
       leading_player ||= player
       
-      sleep 0.25
-      puts "#{player} lays #{card} (#{card.value})"
       
       if card.value > leading_card.value
         leading_card = card
@@ -399,8 +365,6 @@ class Onetwenys
       end
     end
     
-    sleep 0.25
-    puts "\n*\t #{leading_player} wins trick with #{leading_card} (#{points} points)"
 
     { winner: leading_player, points: points }
   end
