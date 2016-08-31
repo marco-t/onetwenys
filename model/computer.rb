@@ -19,6 +19,20 @@ class Computer
     valid_bids.sample
   end
 
+  def choose_trump
+    Card::SUITS[rand(4)]
+  end
+
+  def discard_cards
+    n = rand(Hand::MAX)
+    n.times { self.hand.remove_card(0) }
+    if self.hand.size > 5
+      until self.hand.size == 5 do
+        self.hand.remove_card(0)
+      end
+    end
+  end
+
   def lay_card
     card_position = (0...@hand.size).to_a.sample
     @hand.remove_card(card_position)

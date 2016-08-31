@@ -13,10 +13,39 @@ describe Human do
   end
 end
 
-describe Human, '#lay_card' do
+describe Human, '#discard_cards' do
   before do
     @player = make_player
     allow(@player).to receive(:puts) # silence $stdout for tests
+
+    @player.hand = make_full_hand
+    @hand = @player.hand
+    @initial_size = @hand.size
+  end
+
+  it "removes card(s) from player's hand" do
+    allow(@player).to receive(:gets).and_return(1, 0)
+    @player.discard_cards
+
+    final_size = @hand.size
+
+    expect(final_size).to eq @initial_size - 1
+  end
+
+  it "end when hand is empty" do
+    allow(@player).to receive(:gets).and_return(5, 4, 3, 2, 1)
+    @player.discard_cards
+
+    final_size = @hand.size
+
+    expect(final_size).to eq 0
+  end
+end
+
+describe Human, '#lay_card' do
+  before do
+    @player = make_player
+    allow($stdout).to receive(:puts) # silence $stdout for tests
 
     @player.hand = Hand.new
     @player.hand.add_card(card("Hearts", "A"))

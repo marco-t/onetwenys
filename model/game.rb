@@ -57,7 +57,7 @@ class Game
     winning_bid = bidding_results[:bid]
     move_player_to_front(winning_bidder)
     
-    trump = Card::SUITS[rand(4)]
+    trump = winning_bidder.choose_trump
     d.set_trump_cards(trump)
     
     winning_bidder.hand.add_cards(kitty.remove_cards)
@@ -70,7 +70,8 @@ class Game
       trick_results = play_trick(trump)
       trick_winner = trick_results[:winner]
       trick_points = trick_results[:points]
-      round_results[trick_winner] += trick_points
+      move_player_to_front(trick_winner)
+      round_results[trick_winner.name] += trick_points
     end
     
     #assign points based on bet
@@ -97,10 +98,7 @@ class Game
     highest_bidder = nil
     highest_bid = 0
 
-    counter = 1
     until bidders.size == 1 do
-      puts "Count: #{counter}, bidders: #{bidders.size}"
-
       @players.each do |player|
         is_dealer = player == @dealer
 
@@ -140,7 +138,6 @@ class Game
           highest_bidder = player
         end
       end
-      counter += 1
     end
     
     { player: highest_bidder, bid: highest_bid }
@@ -155,16 +152,9 @@ class Game
     @players.rotate!(idx)
   end
   
-  # this method is set to discard random # of cards for now
   def discard_cards
-    @players.each do |p|
-      n = rand(Hand::MAX)
-      n.times { p.hand.remove_card(0) }
-      if p.hand.size > 5
-        until p.hand.size == 5 do
-          p.hand.remove_card(0)
-        end
-      end
+    @players.each do |player|
+      player.discard_cards
     end
   end
   
@@ -181,9 +171,9 @@ class Game
     leading_player = nil
     points = 5
     
-    @players.each do |player|
+    @players.each_with_index do |player, i|
+      card_value = nil
       card = player.lay_card
-      puts "#{player} laid #{card}"
       points = 10 if card.rank == '5' && card.trump?
 
       leading_card ||= card
@@ -194,16 +184,13 @@ class Game
           leading_card = card
           leading_player = player
         end
+      else
+        card_value = 0
       end
+      puts "\t #{'*' * (i+1)} #{player} laid #{card} (value: #{card_value || card.value})"
     end
 
     { winner: leading_player, points: points }
-  end
-  
-  def card_value(card, leading_card)
-    return card.base_value if leading_card.nil?
-    return card.base_value if card.suit == leading_card.suit
-    0
   end
   
   def tally_point(round_result)
