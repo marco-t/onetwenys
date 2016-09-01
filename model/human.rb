@@ -8,12 +8,12 @@ class Human
     "#{@name}"
   end
 
+  def show_hand
+    @hand.show
+  end
+
   def bid(highest_bid, dealer)
-    if dealer
-      valid_bids = valid_dealer_bids(highest_bid)
-    else
-      valid_bids = valid_nondealer_bids(highest_bid)
-    end
+    valid_bids = dealer ? valid_dealer_bids(highest_bid) : valid_nondealer_bids(highest_bid)
 
     user_input = nil
     until valid_bids.include?(user_input) do
@@ -31,6 +31,8 @@ class Human
 
   def discard_cards
     loop do
+      self.show_hand
+
       user_input = nil
       break if @hand.size == 0
 
@@ -75,7 +77,7 @@ class Human
   end
 
   def get_number
-    Integer(gets)
+    gets.chomp.to_i
   end
 
   def get_suit

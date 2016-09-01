@@ -15,11 +15,12 @@ class Game
     @teams = create_teams
     @dealer = draw_for_dealer
     
+    round = 1
     until goal_reached? do
+      puts "Round #{round}"
       play_round
-      
-      #for test
-      @teams[0].points = 120
+      puts "Team 1: #{@team1.points}, Team 2: #{@team2.points}"
+      round += 1
     end
   end
   
@@ -33,7 +34,10 @@ class Game
   end
   
   def create_teams
-    2.times.map { |i| Team.new @players[i], @players[i+2] }
+    @team1 = Team.new @players[0], @players[2]
+    @team2 = Team.new @players[1], @players[3]
+
+    [@team1, @team2]
   end
   
   def draw_for_dealer
@@ -45,38 +49,46 @@ class Game
   end
   
   def play_round
-    round_results = Hash.new(0)
+    round_points = Hash.new(0)
     move_player_to_end(@dealer)
     
     d = Deck.new.shuffle!
     deal_hands(d)
     kitty = deal_kitty(d)
     
+    show_hands
     bidding_results = bidding_round
+
     winning_bidder = bidding_results[:player]
     winning_bid = bidding_results[:bid]
+
+    bidding_team = @team1.players.include?(winning_bidder) ? @team1 : @team2
+    nonbidding_team = @teams.reject { |t| t == bidding_team }.first
+
     move_player_to_front(winning_bidder)
     
     trump = winning_bidder.choose_trump
     d.set_trump_cards(trump)
+    puts "Trump is #{trump}"
     
     winning_bidder.hand.add_cards(kitty.remove_cards)
     
     discard_cards
-    
     refill_hands(d)
     
-    Hand::MAX.times do
-      trick_results = play_trick(trump)
-      trick_winner = trick_results[:winner]
-      trick_points = trick_results[:points]
-      move_player_to_front(trick_winner)
-      round_results[trick_winner.name] += trick_points
-    end
+    play_tricks(trump, round_points)
     
-    #assign points based on bet
-    #tally_points(round_results)
+    if winning_bid == 30 && round_points[bidding_team] == 30
+      bidding_team.points += 60
+    elsif round_points[bidding_team] >= winning_bid
+      bidding_team.points += round_points[bidding_team]
+    else
+      bidding_team.points -= winning_bid
+    end
+    nonbidding_team.points += round_points[nonbidding_team]
+
     #move dealer button
+    @dealer = @players.first
   end
   
   def deal_hands(deck)
@@ -91,6 +103,10 @@ class Game
     kitty = Kit.new
     3.times { kitty.add_card(deck.deal_card) }
     kitty
+  end
+
+  def show_hands
+    @players.each { |p| p.show_hand }
   end
   
   def bidding_round
@@ -165,12 +181,28 @@ class Game
       cards_needed.times { p.hand.add_card(deck.deal_card) }
     end
   end
+
+  def play_tricks(trump, round_points)
+    Hand::MAX.times do |i|
+      puts "Trick #{i+1}"
+      trick_results = play_trick(trump)
+      trick_winner = trick_results[:winner]
+      trick_points = trick_results[:points]
+      
+      winning_team = @team1.players.include?(trick_winner) ? @team1 : @team2
+
+      move_player_to_front(trick_winner)
+
+      round_points[winning_team] += trick_points
+    end
+  end
   
   def play_trick(trump)
     leading_card = nil
     leading_player = nil
     points = 5
     
+    show_hands
     @players.each_with_index do |player, i|
       card_value = nil
       card = player.lay_card

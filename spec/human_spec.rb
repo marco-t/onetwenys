@@ -24,7 +24,7 @@ describe Human, '#discard_cards' do
   end
 
   it "removes card(s) from player's hand" do
-    allow(@player).to receive(:gets).and_return(1, 0)
+    allow(@player).to receive(:gets).and_return("1", "0")
     @player.discard_cards
 
     final_size = @hand.size
@@ -33,7 +33,7 @@ describe Human, '#discard_cards' do
   end
 
   it "end when hand is empty" do
-    allow(@player).to receive(:gets).and_return(5, 4, 3, 2, 1)
+    allow(@player).to receive(:gets).and_return("5", "4", "3", "2", "1")
     @player.discard_cards
 
     final_size = @hand.size
@@ -53,14 +53,14 @@ describe Human, '#lay_card' do
   end
 
   it "removes a card from player's hand" do
-    allow(@player).to receive(:gets) { 1 }
+    allow(@player).to receive(:gets) { "1" }
     @player.lay_card
 
     expect(@player.hand.size).to eq @hand_size - 1
   end
 
   it "responds to card position in hand" do
-    allow(@player).to receive(:gets) { 1 }
+    allow(@player).to receive(:gets) { "1" }
     @player.lay_card
 
     expect(@player.hand.size).to eq @hand_size - 1
@@ -76,7 +76,7 @@ describe Human, '#bid' do
 
   it "can be received" do
     highest_bid = 0
-    allow(@player).to receive(:gets) { 20 }
+    allow(@player).to receive(:gets) { "20" }
     bid = @player.bid(highest_bid, @dealer)
 
     expect(bid).to eq 20
@@ -84,7 +84,7 @@ describe Human, '#bid' do
 
   it "can only be 0, 20, 25 or 30" do
     highest_bid = 0
-    allow(@player).to receive(:gets).and_return(5, 20)
+    allow(@player).to receive(:gets).and_return("5", "20")
     bid = @player.bid(highest_bid, @dealer)
 
     expect(bid).to eq 20
@@ -92,7 +92,7 @@ describe Human, '#bid' do
 
   it "is higher than last bid" do
     highest_bid = 20
-    allow(@player).to receive(:gets).and_return(20, 25)
+    allow(@player).to receive(:gets).and_return("20", "25")
     bid = @player.bid(highest_bid, @dealer)
 
     expect(bid).to eq 25
@@ -100,7 +100,7 @@ describe Human, '#bid' do
 
   it "can always be zero" do
     highest_bid = 30
-    allow(@player).to receive(:gets).and_return(0)
+    allow(@player).to receive(:gets).and_return("0")
     bid = @player.bid(highest_bid, @dealer)
 
     expect(bid).to eq 0
@@ -109,7 +109,7 @@ describe Human, '#bid' do
   it "dealer can match the highest bid" do
     @dealer = true
     highest_bid = 30
-    allow(@player).to receive(:gets).and_return(30)
+    allow(@player).to receive(:gets).and_return("30")
     bid = @player.bid(highest_bid, @dealer)
 
     expect(bid).to eq 30

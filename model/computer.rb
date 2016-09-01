@@ -9,6 +9,9 @@ class Computer
     "#{@name}"
   end
 
+  def show_hand
+  end
+
   def bid(highest_bid, dealer)
     if dealer
       valid_bids = valid_dealer_bids(highest_bid)

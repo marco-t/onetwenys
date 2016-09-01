@@ -44,4 +44,15 @@ class Hand
   def to_s
     @cards.join(' | ')  
   end
+
+  def show
+    chars = @cards.join(" ").length + @cards.length*6 + 2
+    puts '#' * chars
+    print '| '
+    @cards.each.with_index do |card, i|
+      print "(#{i+1}) #{card} | "
+    end
+    puts 
+    puts '#' * chars
+  end
 end
