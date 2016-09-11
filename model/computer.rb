@@ -12,6 +12,9 @@ class Computer
   def show_hand
   end
 
+  def show_possible_cards(possible_cards)
+  end
+
   def bid(highest_bid, dealer)
     if dealer
       valid_bids = valid_dealer_bids(highest_bid)
@@ -36,9 +39,10 @@ class Computer
     end
   end
 
-  def lay_card
-    card_position = (0...@hand.size).to_a.sample
-    @hand.remove_card(card_position)
+  def lay_card(possible_cards)
+    card_position = rand(possible_cards.size)
+    card = possible_cards[card_position]
+    @hand.remove_card(card)
   end
 
   private

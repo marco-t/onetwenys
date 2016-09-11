@@ -12,6 +12,10 @@ class Human
     @hand.show
   end
 
+  def show_possible_cards(possible_cards)
+    possible_cards.show
+  end
+
   def bid(highest_bid, dealer)
     valid_bids = dealer ? valid_dealer_bids(highest_bid) : valid_nondealer_bids(highest_bid)
 
@@ -49,15 +53,16 @@ class Human
     end
   end
 
-  def lay_card
+  def lay_card(possible_cards)
     user_input = nil
-    until (1..@hand.size).include?(user_input) do
-      print "Choose a card (between 1 and #{@hand.size}): "
+    until (1..possible_cards.size).include?(user_input) do
+      print "Choose a card (between 1 and #{possible_cards.size}): "
       user_input = get_number
     end
 
     card_position = user_input - 1
-    @hand.remove_card(card_position)
+    card = possible_cards[card_position]
+    @hand.remove_card(card)
   end
 
   private

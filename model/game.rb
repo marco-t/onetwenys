@@ -76,7 +76,7 @@ class Game
     discard_cards
     refill_hands(d)
     
-    play_tricks(trump, round_points)
+    play_tricks(round_points)
     
     if winning_bid == 30 && round_points[bidding_team] == 30
       bidding_team.points += 60
@@ -138,7 +138,7 @@ class Game
           dealer_idx = bidders.index(player)
           bidders = bidders.drop(dealer_idx)
 
-          highest_bid = 30
+          highest_bid = bid
           highest_bidder = player
         elsif bid == 0
           bidders.delete(player)
@@ -182,10 +182,10 @@ class Game
     end
   end
 
-  def play_tricks(trump, round_points)
+  def play_tricks(round_points)
     Hand::MAX.times do |i|
       puts "Trick #{i+1}"
-      trick_results = play_trick(trump)
+      trick_results = play_trick
       trick_winner = trick_results[:winner]
       trick_points = trick_results[:points]
       
@@ -197,34 +197,76 @@ class Game
     end
   end
   
-  def play_trick(trump)
-    leading_card = nil
-    leading_player = nil
-    points = 5
+  def play_trick
+    pile = {}
     
-    show_hands
-    @players.each_with_index do |player, i|
-      card_value = nil
-      card = player.lay_card
-      points = 10 if card.rank == '5' && card.trump?
+    lay_cards(pile)
 
-      leading_card ||= card
-      leading_player ||= player
-      
-      if card.suit == leading_card.suit || card.trump?
-        if card.value > leading_card.value
-          leading_card = card
-          leading_player = player
-        end
+    pile_cards = pile.values
+    winning_card = highest_card_in_pile(pile_cards)
+    winning_player = winning_player(pile, winning_card)
+    points = trick_points(pile_cards)
+
+    puts "#{winning_player} wins the trick with #{winning_card}"
+    { winner: winning_player, points: points }
+  end
+
+  def lay_cards(pile)
+    @players.each_with_index do |player, i|
+      possible_cards = determine_possible_cards(player.hand, pile)
+      player.show_possible_cards(possible_cards)
+
+      card = player.lay_card(possible_cards)
+      pile[player] = card
+
+      puts "\t #{'*' * (i+1)} #{player} laid #{card}"
+    end
+  end
+
+  def determine_possible_cards(hand, pile)
+    return hand if pile.empty?
+    
+    first_card = pile.first[1]
+    return hand unless first_card.trump?
+
+    trump_cards = hand.cards.select(&:trump?)
+    return hand if trump_cards.empty?
+
+    reneggable_cards = trump_cards.select do |c|
+      c.value >= 50 && c.value > first_card.value
+    end
+
+    return hand if reneggable_cards == trump_cards
+
+    Hand.new(trump_cards)
+  end
+
+  def highest_card_in_pile(cards)
+    card_values = []
+    first_suit = cards.first.suit
+
+    cards.each do |card|
+      if card.suit == first_suit || card.trump?
+        card_value = card.value
       else
         card_value = 0
       end
-      puts "\t #{'*' * (i+1)} #{player} laid #{card} (value: #{card_value || card.value})"
+      card_values << [card, card_value]
     end
 
-    { winner: leading_player, points: points }
+    max = card_values.max_by { |x| x[1] }
+    max[0]
   end
-  
-  def tally_point(round_result)
+
+  def winning_player(cards, winning_card)
+    cards.key(winning_card)
+  end
+
+  def trick_points(cards)
+    five_trump?(cards) ? 10 : 5
+  end
+
+  def five_trump?(cards)
+    cards.any? { |card| card.rank == '5' && card.trump? }
   end
 end

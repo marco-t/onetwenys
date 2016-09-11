@@ -1,9 +1,9 @@
 class Hand
-  attr_accessor :cards
+  attr_reader :cards
   
   MAX = 5
-  def initialize
-    @cards = []
+  def initialize(cards = [])
+    @cards = cards
   end
   
   def add_card(card)
@@ -16,10 +16,12 @@ class Hand
   end
   
   def remove_card(card)
-    if card.is_a?(Fixnum)
+    if card.is_a? Integer
       @cards.delete_at(card)
-    elsif card.is_a?(String)
-      @cards.delete_if { |c| card == c.to_abbr }
+    elsif card.is_a? String
+      @cards.delete_if { |c| c.to_abbr == card }
+    elsif card.is_a? Card
+      @cards.delete(card)
     end
   end
   
@@ -39,6 +41,10 @@ class Hand
   
   def size
     @cards.size
+  end
+
+  def [](key)
+    key.is_a?(Integer) ? @cards[key] : nil
   end
   
   def to_s
