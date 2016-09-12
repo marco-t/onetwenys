@@ -96,7 +96,7 @@ class Game
     @players.each do |p| 
       p.hand = Hand.new
       Hand::MAX.times { p.hand.add_card(deck.deal_card) }
-      p.hand.sort_by_suit!
+      p.hand.sort!
     end
   end
   
@@ -180,6 +180,7 @@ class Game
       cards_in_hand = p.hand.size
       cards_needed = Hand::MAX - cards_in_hand
       cards_needed.times { p.hand.add_card(deck.deal_card) }
+      p.hand.sort!
     end
   end
 

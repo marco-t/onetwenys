@@ -48,20 +48,21 @@ describe Human, '#lay_card' do
     allow($stdout).to receive(:puts) # silence $stdout for tests
 
     @player.hand = Hand.new
+    @possible_cards = @player.hand
     @player.hand.add_card(card("Hearts", "A"))
     @hand_size = @player.hand.size
   end
 
   it "removes a card from player's hand" do
     allow(@player).to receive(:gets) { "1" }
-    @player.lay_card
+    @player.lay_card(@possible_cards)
 
     expect(@player.hand.size).to eq @hand_size - 1
   end
 
   it "responds to card position in hand" do
     allow(@player).to receive(:gets) { "1" }
-    @player.lay_card
+    @player.lay_card(@possible_cards)
 
     expect(@player.hand.size).to eq @hand_size - 1
   end

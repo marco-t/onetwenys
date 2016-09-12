@@ -24,19 +24,14 @@ class Hand
       @cards.delete(card)
     end
   end
-  
-  def sort_by_suit!
-    @cards.sort_by! {|c| c.suit}
-  end
-  
-  def sort_by_value!
-    @cards.sort_by! do |card|
-      if card.trump?
-        card.trump_value
-      else
-        card.base_value
-      end
-    end.reverse!
+
+  def sort!
+    sort_by_value!
+    partitions = @cards.partition(&:trump?)
+    non_trumps = partitions.last
+    groups = non_trumps.group_by(&:suit)
+
+    @cards = [partitions.first, groups.values].flatten
   end
   
   def size
@@ -61,4 +56,15 @@ class Hand
     puts 
     puts '#' * chars
   end
+
+  private
+
+  def sort_by_suit
+    @cards.sort_by(&:suit)
+  end
+  
+  def sort_by_value!
+    @cards.sort_by!(&:value).reverse!
+  end
+
 end
