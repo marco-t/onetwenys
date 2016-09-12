@@ -1,4 +1,5 @@
 $LOAD_PATH << './model'
+require 'outputer'
 require 'card'
 require 'deck'
 require 'hand'
@@ -8,6 +9,7 @@ require 'computer'
 require 'team'
 
 class Game
+  include Outputer
   GOAL = 120
   
   def play_game
@@ -18,9 +20,12 @@ class Game
     
     round = 1
     until goal_reached? do
-      puts "Round #{round}"
+      output "Round #{round}"
+
       play_round
-      puts "Team 1: #{@team1.points}, Team 2: #{@team2.points}"
+
+      output "\t Team 1: #{@team1.points}, Team 2: #{@team2.points}\n\n"
+
       round += 1
     end
   end
@@ -70,7 +75,8 @@ class Game
     
     trump = winning_bidder.choose_trump
     d.set_trump_cards(trump)
-    puts "Trump is #{trump}"
+
+    output "\nTrump is #{trump}\n\n"
     
     winning_bidder.hand.add_cards(kitty.remove_cards)
     winning_bidder.hand.sort!
@@ -117,7 +123,7 @@ class Game
     highest_bid = 0
 
     until bidders.size == 1 do
-      @players.each do |player|
+      @players.each_with_index do |player, i|
         is_dealer = player == @dealer
 
         next unless bidders.include?(player)
@@ -128,13 +134,16 @@ class Game
         end
         
         if highest_bid == 30 && !is_dealer
-          puts "#{player} can't outbid #{highest_bidder}"
+          output "\t\t #{player} can't outbid #{highest_bidder}"
+
           bidders.delete(player)
           next 
         end
 
         bid = player.bid(highest_bid, is_dealer)
-        puts "#{player} bids #{bid}"
+
+        output "\t\t #{player} bids #{bid}"
+
         if bid == 30 && is_dealer
           # dealer outbid everyone else
           dealer_idx = bidders.index(player)
@@ -187,7 +196,8 @@ class Game
 
   def play_tricks(round_points)
     Hand::MAX.times do |i|
-      puts "Trick #{i+1}"
+      output "Trick #{i+1}"
+
       trick_results = play_trick
       trick_winner = trick_results[:winner]
       trick_points = trick_results[:points]
@@ -210,7 +220,7 @@ class Game
     winning_player = winning_player(pile, winning_card)
     points = trick_points(pile_cards)
 
-    puts "#{winning_player} wins the trick with #{winning_card}"
+    output "\n#{winning_player} wins the trick with #{winning_card}\n\n"
     { winner: winning_player, points: points }
   end
 
@@ -222,7 +232,7 @@ class Game
       card = player.lay_card(possible_cards)
       pile[player] = card
 
-      puts "\t #{'*' * (i+1)} #{player} laid #{card}"
+      output "\t #{'*' * (i+1)} #{player} laid #{card}"
     end
   end
 

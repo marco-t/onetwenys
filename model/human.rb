@@ -1,10 +1,12 @@
 $LOAD_PATH << './model'
 require 'player'
+require 'outputer'
 
 class Human < Player
+  include Outputer
 
   def show_hand
-    @hand.show
+    @hand.show if @hand.size > 0
   end
 
   def show_possible_cards(possible_cards)
@@ -16,15 +18,18 @@ class Human < Player
 
     user_input = nil
     until valid_bids.include?(user_input) do
-      print "Place your bid #{valid_bids}: "
+      output_line "Place your bid #{valid_bids}: "
+
       user_input = get_number
+      clear_line
     end
 
     user_input
   end
 
   def choose_trump
-    print "What suit will be trump? "
+    output_line "What suit will be trump? "
+
     get_suit
   end
 
@@ -39,9 +44,12 @@ class Human < Player
       max = @hand.size
 
       until (min..max).include? user_input do
-        print "Pick a card to discard (#{min} to #{max}): "
+        output_line "Pick a card to discard (#{min} to #{max}): "
+
         user_input = get_number
+        clear_line
       end
+      clear_lines(3)
 
       break if user_input == 0
       @hand.remove_card(user_input - 1)
@@ -51,9 +59,12 @@ class Human < Player
   def lay_card(possible_cards)
     user_input = nil
     until (1..possible_cards.size).include?(user_input) do
-      print "Choose a card (between 1 and #{possible_cards.size}): "
+      output_line "Choose a card (between 1 and #{possible_cards.size}): "
+
       user_input = get_number
+      clear_line
     end
+    clear_lines(3)
 
     card_position = user_input - 1
     card = possible_cards[card_position]

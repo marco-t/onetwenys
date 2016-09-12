@@ -20,16 +20,13 @@ class Computer < Player
   end
 
   def choose_trump
-    Card::SUITS[rand(4)]
+    best_suit
   end
 
   def discard_cards
-    n = rand(Hand::MAX)
-    n.times { self.hand.remove_card(0) }
-    if self.hand.size > 5
-      until self.hand.size == 5 do
-        self.hand.remove_card(0)
-      end
+    @hand.cards.each { |c| @hand.remove_card(c) unless c.trump? }
+    until @hand.size <= 5
+      @hand.remove_card(@hand.cards.min)
     end
   end
 
@@ -37,5 +34,11 @@ class Computer < Player
     card_position = rand(possible_cards.size)
     card = possible_cards[card_position]
     @hand.remove_card(card)
+  end
+
+  private
+
+  def best_suit
+    Card::SUITS[rand(4)]
   end
 end

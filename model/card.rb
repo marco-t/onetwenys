@@ -1,5 +1,6 @@
 class Card
-  attr_accessor :suit, :rank, :color
+  attr_accessor :suit, :rank
+  attr_reader :color
   SUITS = ["Hearts", "Clubs", "Diamonds", "Spades"]
   RANKS = %w(A 2 3 4 5 6 7 8 9 10 J Q K)
   RED_VALUES = { 
@@ -44,9 +45,9 @@ class Card
 
   def get_color
     if @suit == 'Hearts' || @suit == 'Diamonds'
-      return 'red'
+      'red'
     else
-      return 'black'
+      'black'
     end
   end
   
@@ -57,13 +58,13 @@ class Card
 
   def trump_value
     if @rank == '5'
-      return 52
+      52
     elsif @rank == 'J'
-      return 51
+      51
     elsif @rank == 'A' 
       @suit == 'Hearts' ? 50 : 49
     else
-      return base_value + 35
+      base_value + 35
     end
   end
 end
