@@ -1,10 +1,11 @@
-require './model/card'
-require './model/deck'
-require './model/hand'
-require './model/kit'
-require './model/human'
-require './model/computer'
-require './model/team'
+$LOAD_PATH << './model'
+require 'card'
+require 'deck'
+require 'hand'
+require 'kit'
+require 'human'
+require 'computer'
+require 'team'
 
 class Game
   GOAL = 120
