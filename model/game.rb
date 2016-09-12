@@ -73,6 +73,7 @@ class Game
     puts "Trump is #{trump}"
     
     winning_bidder.hand.add_cards(kitty.remove_cards)
+    winning_bidder.hand.sort!
     
     discard_cards
     refill_hands(d)

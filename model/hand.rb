@@ -66,5 +66,4 @@ class Hand
   def sort_by_value!
     @cards.sort_by!(&:value).reverse!
   end
-
 end

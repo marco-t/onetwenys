@@ -3,11 +3,11 @@ require './spec/support/card'
 
 def full_hand
   cards = [
-    card("Spades", "5"),6
-    card("Hearts", "A"),1
-    card("Diamonds", "5"),5
-    card("Clubs", "5"),6
-    card("Diamonds", "A")1
+    card("Spades", "5"),
+    card("Hearts", "A"),
+    card("Diamonds", "5"),
+    card("Clubs", "5"),
+    card("Diamonds", "A")
   ]
 
   Hand.new(cards)
