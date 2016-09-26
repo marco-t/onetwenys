@@ -32,6 +32,10 @@ class Card
   def trump?
     @trump
   end
+
+  # def <=>(other)
+  #   value <=> other.value
+  # end
   
   def to_s
     "#{@rank} of #{@suit}"

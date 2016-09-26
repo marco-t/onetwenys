@@ -11,13 +11,15 @@ require 'team'
 class Game
   include Outputer
   GOAL = 120
-  
-  def play_game
+
+  def initialize
     @total_points = { team1: 0, team2: 0 }
     @players = create_players
     @teams = create_teams
     @dealer = draw_for_dealer
-    
+  end
+  
+  def play_game
     round = 1
     until goal_reached? do
       output "Round #{round}"

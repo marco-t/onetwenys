@@ -24,9 +24,11 @@ class Computer < Player
   end
 
   def discard_cards
-    @hand.cards.each { |c| @hand.remove_card(c) unless c.trump? }
+    nontrumps = @hand.cards.reject { |c| c.trump? }
+    nontrumps.each { |c| @hand.remove_card(c) }
+
     until @hand.size <= 5
-      @hand.remove_card(@hand.cards.min)
+      @hand.remove_card(lowest_card)
     end
   end
 
@@ -37,6 +39,10 @@ class Computer < Player
   end
 
   private
+
+  def lowest_card
+    @hand.sort.last
+  end
 
   def best_suit
     Card::SUITS[rand(4)]

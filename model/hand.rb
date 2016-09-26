@@ -25,13 +25,17 @@ class Hand
     end
   end
 
-  def sort!
-    sort_by_value!
-    partitions = @cards.partition(&:trump?)
+  def sort
+    sorted_by_value = @cards.sort_by(&:value).reverse
+    partitions = sorted_by_value.partition(&:trump?)
     non_trumps = partitions.last
     groups = non_trumps.group_by(&:suit)
 
-    @cards = [partitions.first, groups.values].flatten
+    [partitions.first, groups.values].flatten
+  end
+
+  def sort!
+    @cards = sort
   end
   
   def size
@@ -61,9 +65,5 @@ class Hand
 
   def sort_by_suit
     @cards.sort_by(&:suit)
-  end
-  
-  def sort_by_value!
-    @cards.sort_by!(&:value).reverse!
   end
 end
