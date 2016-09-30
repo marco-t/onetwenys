@@ -35,7 +35,7 @@ class Computer < Player
   def lay_card(possible_cards)
     card_position = rand(possible_cards.size)
     card = possible_cards[card_position]
-    @hand.remove_card(card)
+    removed_card = @hand.remove_card(card)
   end
 
   private

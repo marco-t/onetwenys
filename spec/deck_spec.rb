@@ -1,4 +1,3 @@
-require './model/deck'
 require './spec/support/deck'
 
 describe Deck do
@@ -30,47 +29,46 @@ end
 
 describe Deck, '#shuffle!' do
   it "cards are randomized" do
-    deck = Deck.new
-    card1 = deck.deal_card.to_s
+    deck1 = Deck.new
+    names1 = deck1.map { |card| card.to_abbr }
 
-    deck = Deck.new.shuffle!
-    card2 = deck.deal_card.to_s
+    deck2 = Deck.new.shuffle!
+    names2 = deck2.map { |card| card.to_abbr }
 
-    expect(card1).not_to eq(card2)
+    expect(names1).not_to eq(names2)
   end
 end
 
 describe Deck, '#set_trump_cards' do
   it "sets same suit to trump" do
     deck = Deck.new
-    cards = all_cards(deck)
 
     trump = 'Clubs'
     deck.set_trump_cards(trump)
-    clubs = cards.select_suit(trump)
+    clubs = deck.select { |card| card.suit == 'Clubs'}
+    clubs_trump = clubs.all? { |card| card.trump? }
 
-    expect(all_trump?(clubs)).to be true
+    expect(clubs_trump).to be true
   end
 
   it "does not set other suits to trump" do
     deck = Deck.new
-    cards = all_cards(deck)
 
     trump = 'Clubs'
     deck.set_trump_cards(trump)
-    diamonds = cards.select_suit('Diamonds')
+    diamonds = deck.select { |card| card.suit == 'Diamonds'}
+    diamonds_trump = diamonds.any? { |card| card.trump? }
 
-    expect(all_trump?(diamonds)).to be false
+    expect(diamonds_trump).to be false
   end
 
   it "sets the Ace of Hearts to trump" do
     deck = Deck.new
-    cards = all_cards(deck)
 
     trump = 'Clubs'
     deck.set_trump_cards(trump)
 
-    ace_of_hearts = cards.first
+    ace_of_hearts = deck.first
     expect(ace_of_hearts.trump?).to be true
   end
 end

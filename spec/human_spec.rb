@@ -1,9 +1,5 @@
-require './model/human'
-require './spec/support/human'
-
-require './model/hand'
-require './spec/support/hand'
-require './spec/support/card'
+require './spec/support/player'
+require './spec/support/outputer_off'
 
 describe Human do
   it "can be created" do
@@ -15,10 +11,9 @@ end
 
 describe Human, '#discard_cards' do
   before do
-    @player = make_player
-    allow(@player).to receive(:puts) # silence $stdout for tests
+    @player = make_human
 
-    @player.hand = make_full_hand
+    @player.hand = full_hand
     @hand = @player.hand
     @initial_size = @hand.size
   end
@@ -44,8 +39,7 @@ end
 
 describe Human, '#lay_card' do
   before do
-    @player = make_player
-    allow($stdout).to receive(:puts) # silence $stdout for tests
+    @player = make_human
 
     @player.hand = Hand.new
     @possible_cards = @player.hand
@@ -70,9 +64,8 @@ end
 
 describe Human, '#bid' do
   before do
-    @player = make_player
+    @player = make_human
     @dealer = false
-    allow(@player).to receive(:puts) # silence $stdout for tests
   end
 
   it "can be received" do

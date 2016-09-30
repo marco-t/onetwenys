@@ -10,10 +10,9 @@ require 'team'
 
 class Game
   include Outputer
-  GOAL = 120
+  GOAL = 10
 
   def initialize
-    @total_points = { team1: 0, team2: 0 }
     @players = create_players
     @teams = create_teams
     @dealer = draw_for_dealer
@@ -30,6 +29,8 @@ class Game
 
       round += 1
     end
+    winner = @teams.max_by { |team| team.points }
+    output "\t#{winner.players[0].name.upcase} AND #{winner.players[1].name.upcase} WIN!"
   end
   
   private
@@ -71,7 +72,7 @@ class Game
     winning_bid = bidding_results[:bid]
 
     bidding_team = @team1.players.include?(winning_bidder) ? @team1 : @team2
-    nonbidding_team = @teams.reject { |t| t == bidding_team }.first
+    nonbidding_team = @teams.find { |t| t != bidding_team }
 
     move_player_to_front(winning_bidder)
     
@@ -244,7 +245,7 @@ class Game
     first_card = pile.first[1]
     return hand unless first_card.trump?
 
-    trump_cards = hand.cards.select(&:trump?)
+    trump_cards = hand.select(&:trump?)
     return hand if trump_cards.empty?
 
     reneggable_cards = trump_cards.select do |c|

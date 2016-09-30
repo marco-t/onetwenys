@@ -68,7 +68,7 @@ class Human < Player
 
     card_position = user_input - 1
     card = possible_cards[card_position]
-    @hand.remove_card(card)
+    removed_card = @hand.remove_card(card)
   end
 
   private

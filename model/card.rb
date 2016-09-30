@@ -1,4 +1,6 @@
 class Card
+  include Comparable
+
   attr_accessor :suit, :rank
   attr_reader :color
   SUITS = ["Hearts", "Clubs", "Diamonds", "Spades"]
@@ -33,9 +35,9 @@ class Card
     @trump
   end
 
-  # def <=>(other)
-  #   value <=> other.value
-  # end
+  def <=>(other)
+    self.value <=> other.value
+  end
   
   def to_s
     "#{@rank} of #{@suit}"

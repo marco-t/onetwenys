@@ -1,6 +1,8 @@
 require './model/deck'
 
 def all_cards(deck)
+  deck.map { |card|  }
+
   cards = []
   while true do
     card = deck.deal_card
@@ -20,13 +22,6 @@ def all_cards_by_name(deck)
   cards
 end
 
-def all_trump?(suit)
-  suit.all? {|card| card.trump? }
-end
-
-# Monkey patching
-class Array
-  def select_suit(suit)
-    select { |card| card.suit == suit }
-  end
+def all_trump?(cards)
+  cards.all? {|card| card.trump? }
 end

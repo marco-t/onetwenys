@@ -1,4 +1,3 @@
-require './model/card'
 require './spec/support/card'
 
 describe Card do
@@ -38,8 +37,8 @@ describe Card, '#value' do
     two_hearts = card("Hearts", "2")
     two_clubs = card("Clubs", "2")
 
-    expect(ten_hearts.value).to be > ten_clubs.value
-    expect(two_hearts.value).to be < two_clubs.value
+    expect(ten_hearts).to be > ten_clubs
+    expect(two_hearts).to be < two_clubs
   end
 
   it "trump beats cards of other suit" do
@@ -48,7 +47,7 @@ describe Card, '#value' do
 
     ten_hearts.trump!
 
-    expect(ten_hearts.value).to be > ten_diamonds.value
+    expect(ten_hearts).to be > ten_diamonds
   end
 
   it "Ace of Hearts beats Ace of Trump" do
@@ -57,6 +56,6 @@ describe Card, '#value' do
     ace_hearts.trump!
     ace_diamonds.trump!
 
-    expect(ace_hearts.value).to be > ace_diamonds.value
+    expect(ace_hearts).to be > ace_diamonds
   end
 end

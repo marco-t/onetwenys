@@ -1,6 +1,13 @@
 require './model/computer'
+require './model/human'
+require './model/hand'
+require './spec/support/card'
 
-def make_player
+def make_human
+  Human.new "John Doe"
+end
+
+def make_computer
   Computer.new "John Doe"
 end
 
